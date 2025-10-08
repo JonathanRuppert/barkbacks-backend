@@ -22,7 +22,7 @@ router.post('/api/image', async (req, res) => {
     });
 
     const imageUrl = response.data[0].url;
-    res.json({ imageUrl });
+    res.json({ imageUrl }); // ← This is the key line
   } catch (error) {
     console.error('Image generation error:', error.message);
     res.status(500).json({ error: 'Image generation failed' });
