@@ -12,6 +12,7 @@ const animateRoutes = require('./routes/animateRoutes');
 const submitRoutes = require('./routes/submitRoutes');
 const renderRoutes = require('./routes/renderRoutes');
 const creatorRoutes = require('./routes/creatorRoutes');
+const storyRoutes = require('./routes/storyRoutes');
 
 // Mount routes
 app.use('/', promptRoutes);
@@ -20,5 +21,6 @@ app.use('/', animateRoutes);
 app.use('/', submitRoutes);
 app.use('/', renderRoutes);
 app.use('/', creatorRoutes);
+app.use('/', storyRoutes);
 
 module.exports = app;
