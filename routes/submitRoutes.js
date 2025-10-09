@@ -1,38 +1,28 @@
 const express = require('express');
 const router = express.Router();
 
-let stories = []; // Temporary in-memory storage
+router.post('/api/submit', async (req, res) => {
+  const { prompt, image, animation } = req.body;
 
-// Submit a new story
-router.post('/api/submit', (req, res) => {
-  const { prompt, imageUrl, animationUrl, creatorName } = req.body;
-
-  if (!prompt || !imageUrl || !animationUrl || !creatorName) {
-    return res.status(400).json({ error: 'All fields are required' });
+  // Basic validation
+  if (!prompt || !image || !animation) {
+    return res.status(400).json({ error: 'Missing required fields: prompt, image, or animation' });
   }
 
-  const newStory = {
-    id: stories.length + 1,
-    prompt,
-    imageUrl,
-    animationUrl,
-    creatorName,
-    timestamp: new Date().toISOString(),
-  };
+  try {
+    // Placeholder logic — future: save to DB, trigger workflows, etc.
+    console.log('New submission received:', {
+      prompt,
+      image,
+      animation,
+    });
 
-  stories.push(newStory);
-  res.json({ success: true, story: newStory });
-});
-
-// Get all stories
-router.get('/api/stories', (req, res) => {
-  res.json(stories);
-});
-
-// Clear all stories (optional dev route)
-router.get('/api/clear', (req, res) => {
-  stories = [];
-  res.json({ success: true, message: 'All stories cleared' });
+    // Respond with success
+    res.status(200).json({ message: 'Submission received successfully' });
+  } catch (error) {
+    console.error('Submission error:', error.message);
+    res.status(500).json({ error: 'Submission failed' });
+  }
 });
 
 module.exports = router;
