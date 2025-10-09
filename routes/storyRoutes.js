@@ -75,6 +75,7 @@ router.post('/api/submit', async (req, res) => {
 
     const stories = loadStories();
     stories.unshift(story);
+    console.log('Saving story:', story); // ✅ Debug log
     saveStories(stories);
 
     res.json({ success: true, id: story.id });
