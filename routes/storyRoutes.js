@@ -22,6 +22,19 @@ function suggestTags(prompt) {
   return tags.length ? tags : ['emotional'];
 }
 
+function getCampaignTags(timestamp) {
+  const tags = [];
+  const date = new Date(timestamp);
+
+  const isFall = date.getMonth() >= 9 && date.getMonth() <= 11; // Oct–Dec
+  const isLaunchWeek = date.getFullYear() === 2025 && date.getMonth() === 9 && date.getDate() <= 15;
+
+  if (isFall) tags.push('Fall 2025');
+  if (isLaunchWeek) tags.push('Launch Week');
+
+  return tags;
+}
+
 router.post('/api/submit', async (req, res) => {
   const { prompt, image, animation } = req.body;
 
@@ -30,14 +43,14 @@ router.post('/api/submit', async (req, res) => {
   }
 
   try {
-    const tags = suggestTags(prompt);
+    const timestamp = Date.now();
+    const tags = [...suggestTags(prompt), ...getCampaignTags(timestamp)];
 
-    // Detect remix lineage
     const remixMatch = prompt.match(/remixed from (\w+)/i);
     const remixedFrom = remixMatch ? remixMatch[1] : null;
 
     const story = {
-      id: 'barkbacks_' + Date.now(),
+      id: 'barkbacks_' + timestamp,
       prompt,
       image,
       animation,
