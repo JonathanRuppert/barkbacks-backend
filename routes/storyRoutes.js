@@ -57,4 +57,17 @@ router.get('/api/stories', (req, res) => {
   res.json(storyFeed);
 });
 
+router.get('/api/profile/:creatorId', (req, res) => {
+  const { creatorId } = req.params;
+
+  const profileStories = storyFeed.filter((story) => {
+    return story.remixedFrom === creatorId || story.id === creatorId;
+  });
+
+  res.json({
+    creatorId,
+    stories: profileStories,
+  });
+});
+
 module.exports = router;
