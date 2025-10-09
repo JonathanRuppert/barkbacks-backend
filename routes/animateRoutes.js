@@ -1,5 +1,3 @@
-// routes/animateRoutes.js
-
 const express = require('express');
 const router = express.Router();
 
@@ -13,7 +11,8 @@ router.post('/api/animate', async (req, res) => {
   }
 
   try {
-    const animationUrl = 'https://cdn.barkbacks.com/animations/fallback.mp4';
+    // Temporary working fallback animation
+    const animationUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
     res.json({ animation: animationUrl });
   } catch (error) {
     console.error('Animation generation error:', error.message);

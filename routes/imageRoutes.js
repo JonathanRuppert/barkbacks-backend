@@ -1,5 +1,3 @@
-// routes/imageRoutes.js
-
 const express = require('express');
 const router = express.Router();
 
@@ -13,8 +11,8 @@ router.post('/api/image', async (req, res) => {
   }
 
   try {
-    // Placeholder image URL — replace with real generation logic later
-    const imageUrl = 'https://cdn.barkbacks.com/images/fallback.jpg';
+    // Temporary working fallback image
+    const imageUrl = 'https://placekitten.com/800/600';
     res.json({ image: imageUrl });
   } catch (error) {
     console.error('Image generation error:', error.message);
