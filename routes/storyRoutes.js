@@ -32,12 +32,17 @@ router.post('/api/submit', async (req, res) => {
   try {
     const tags = suggestTags(prompt);
 
+    // Detect remix lineage
+    const remixMatch = prompt.match(/remixed from (\w+)/i);
+    const remixedFrom = remixMatch ? remixMatch[1] : null;
+
     const story = {
       id: 'barkbacks_' + Date.now(),
       prompt,
       image,
       animation,
       tags,
+      remixedFrom,
     };
 
     storyFeed.unshift(story);
