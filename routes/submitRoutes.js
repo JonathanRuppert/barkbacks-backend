@@ -11,7 +11,6 @@ router.post('/api/submit', async (req, res) => {
   }
 
   try {
-    // Placeholder logic — replace with real submission handling later
     const submissionId = 'barkbacks_' + Date.now();
     res.json({ success: true, id: submissionId });
   } catch (error) {
