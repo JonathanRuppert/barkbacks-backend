@@ -1,7 +1,22 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 
-let storyFeed = [];
+const DATA_PATH = path.join(__dirname, '../data/stories.json');
+
+function loadStories() {
+  try {
+    const raw = fs.readFileSync(DATA_PATH);
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveStories(stories) {
+  fs.writeFileSync(DATA_PATH, JSON.stringify(stories, null, 2));
+}
 
 function suggestTags(prompt) {
   const tags = [];
@@ -26,7 +41,7 @@ function getCampaignTags(timestamp) {
   const tags = [];
   const date = new Date(timestamp);
 
-  const isFall = date.getMonth() >= 9 && date.getMonth() <= 11; // Oct–Dec
+  const isFall = date.getMonth() >= 9 && date.getMonth() <= 11;
   const isLaunchWeek = date.getFullYear() === 2025 && date.getMonth() === 9 && date.getDate() <= 15;
 
   if (isFall) tags.push('Fall 2025');
@@ -58,7 +73,10 @@ router.post('/api/submit', async (req, res) => {
       remixedFrom,
     };
 
-    storyFeed.unshift(story);
+    const stories = loadStories();
+    stories.unshift(story);
+    saveStories(stories);
+
     res.json({ success: true, id: story.id });
   } catch (error) {
     console.error('Submission error:', error.message);
@@ -67,13 +85,15 @@ router.post('/api/submit', async (req, res) => {
 });
 
 router.get('/api/stories', (req, res) => {
-  res.json(storyFeed);
+  const stories = loadStories();
+  res.json(stories);
 });
 
 router.get('/api/profile/:creatorId', (req, res) => {
+  const stories = loadStories();
   const { creatorId } = req.params;
 
-  const profileStories = storyFeed.filter((story) => {
+  const profileStories = stories.filter((story) => {
     return story.remixedFrom === creatorId || story.id === creatorId;
   });
 
@@ -82,6 +102,5 @@ router.get('/api/profile/:creatorId', (req, res) => {
     stories: profileStories,
   });
 });
-
 
 module.exports = router;
