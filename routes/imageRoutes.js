@@ -1,11 +1,10 @@
-// Confirmed POST route for /api/image
-
+// routes/imageRoutes.js
 
 const express = require('express');
 const router = express.Router();
 
 router.post('/api/image', async (req, res) => {
-   const { prompt } = req.body;
+  const { prompt } = req.body;
 
   console.log('Received /api/image payload:', req.body);
 
