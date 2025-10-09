@@ -1,3 +1,5 @@
+// Confirmed POST route for /api/image
+
 const express = require('express');
 const router = express.Router();
 
