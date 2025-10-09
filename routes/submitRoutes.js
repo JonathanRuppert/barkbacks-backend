@@ -7,6 +7,7 @@ router.post('/api/submit', async (req, res) => {
   console.log('Received /api/submit payload:', req.body);
 
   if (!prompt || !image || !animation) {
+    console.warn('Missing fields:', { prompt, image, animation });
     return res.status(400).json({ error: 'Missing required fields: prompt, image, or animation' });
   }
 
