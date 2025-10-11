@@ -1,22 +1,6 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const router = express.Router();
-
-const DATA_PATH = path.join(__dirname, '../data/stories.json');
-
-function loadStories() {
-  try {
-    const raw = fs.readFileSync(DATA_PATH);
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveStories(stories) {
-  fs.writeFileSync(DATA_PATH, JSON.stringify(stories, null, 2));
-}
+const Story = require('../models/Story');
 
 function suggestTags(prompt) {
   const tags = [];
@@ -64,44 +48,48 @@ router.post('/api/submit', async (req, res) => {
     const remixMatch = prompt.match(/remixed from (\w+)/i);
     const remixedFrom = remixMatch ? remixMatch[1] : null;
 
-    const story = {
+    const story = new Story({
       id: 'barkbacks_' + timestamp,
       prompt,
       image,
       animation,
       tags,
       remixedFrom,
-    };
+    });
 
-    const stories = loadStories();
-    stories.unshift(story);
-    console.log('Saving story:', story); // ✅ Debug log
-    saveStories(stories);
+    await story.save();
+    console.log('✅ Story saved:', story);
 
     res.json({ success: true, id: story.id });
   } catch (error) {
-    console.error('Submission error:', error.message);
+    console.error('❌ Submission error:', error.message);
     res.status(500).json({ error: 'Submission failed' });
   }
 });
 
-router.get('/api/stories', (req, res) => {
-  const stories = loadStories();
-  res.json(stories);
+router.get('/api/stories', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: -1 });
+    res.json(stories);
+  } catch (error) {
+    console.error('❌ Fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch stories' });
+  }
 });
 
-router.get('/api/profile/:creatorId', (req, res) => {
-  const stories = loadStories();
+router.get('/api/profile/:creatorId', async (req, res) => {
   const { creatorId } = req.params;
 
-  const profileStories = stories.filter((story) => {
-    return story.remixedFrom === creatorId || story.id === creatorId;
-  });
+  try {
+    const stories = await Story.find({
+      $or: [{ remixedFrom: creatorId }, { id: creatorId }],
+    }).sort({ createdAt: -1 });
 
-  res.json({
-    creatorId,
-    stories: profileStories,
-  });
+    res.json({ creatorId, stories });
+  } catch (error) {
+    console.error('❌ Profile fetch error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch profile stories' });
+  }
 });
 
 module.exports = router;
