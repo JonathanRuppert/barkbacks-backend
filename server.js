@@ -1,6 +1,8 @@
+// server.js — BarkBacks backend entry point
+
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -9,23 +11,34 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.set('strictQuery', false);
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ Connected to MongoDB'))
-.catch((err) => console.error('❌ MongoDB connection error:', err));
+const mongoURI = process.env.MONGO_URI;
+
+mongoose.connect(mongoURI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+  })
+  .catch((err) => {
+    console.error('❌ Initial MongoDB connection error:', err);
+  });
 
 mongoose.connection.on('connected', () => {
-  console.log('✅ Mongoose connection open to DB:', mongoose.connection.name);
+  console.log(`✅ Mongoose connected to DB: ${mongoose.connection.name}`);
 });
 
-// Routes
-const storyRoutes = require('./routes/storyRoutes');
-app.use(storyRoutes);
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose connection error:', err);
+});
 
-// Server Start
+// Test Route
+app.get('/api/test-db', (req, res) => {
+  if (mongoose.connection.readyState === 1) {
+    res.json({ message: 'Connected to MongoDB' });
+  } else {
+    res.status(500).json({ message: 'Not connected to MongoDB' });
+  }
+});
+
+// Start Server
 app.listen(PORT, () => {
   console.log(`🚀 BarkBacks backend running on http://localhost:${PORT}`);
 });
