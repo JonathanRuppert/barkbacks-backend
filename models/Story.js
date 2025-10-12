@@ -1,4 +1,4 @@
-/// Story.js — MongoDB schema for BarkBacks
+// Story.js — MongoDB schema for BarkBacks
 
 const mongoose = require('mongoose');
 
@@ -28,4 +28,3 @@ const storySchema = new mongoose.Schema({
 
 // 🧠 Export the model so it can be used in server.js
 module.exports = mongoose.model('Story', storySchema);
-
