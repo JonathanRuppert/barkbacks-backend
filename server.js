@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 10000;
 const MONGO_URI = process.env.MONGO_URI;
 
 // ✅ Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors()); // Allow frontend access from Vercel
+app.use(express.json()); // Parse incoming JSON
 
 // ✅ MongoDB Connection
 mongoose.connect(MONGO_URI, {
@@ -23,14 +23,14 @@ mongoose.connect(MONGO_URI, {
 const db = mongoose.connection;
 
 db.on('error', (err) => {
-  console.error('❌ Initial MongoDB connection error:', err);
+  console.error('❌ MongoDB connection error:', err);
 });
 
 db.once('open', () => {
-  console.log('✅ Mongoose connected to DB: barkbacks');
+  console.log('✅ Connected to MongoDB Atlas');
 });
 
-// ✅ Test Route for DebugPanel
+// ✅ Debug route for frontend heartbeat
 app.get('/api/test-db', async (req, res) => {
   try {
     await mongoose.connection.db.admin().ping();
@@ -40,12 +40,26 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
-// ✅ Root Route
+// ✅ BarkBack story submission route
+app.post('/api/create-story', async (req, res) => {
+  try {
+    const { petName, emotion, storyText } = req.body;
+
+    // You can replace this with a MongoDB model later
+    console.log('📥 New BarkBack received:', { petName, emotion, storyText });
+
+    res.status(201).json({ message: 'Story received!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to save story', error: err.message });
+  }
+});
+
+// ✅ Root route
 app.get('/', (req, res) => {
   res.send('🐾 BarkBacks backend is running');
 });
 
-// ✅ Start Server
+// ✅ Start server
 app.listen(PORT, () => {
-  console.log(`🚀 BarkBacks backend running on http://localhost:${PORT}`);
+  console.log(`🚀 BarkBacks backend running on port ${PORT}`);
 });
