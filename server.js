@@ -5,6 +5,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const Story = require('./models/Story'); // MongoDB model for BarkBacks
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -45,10 +46,10 @@ app.post('/api/create-story', async (req, res) => {
   try {
     const { petName, emotion, storyText } = req.body;
 
-    // You can replace this with a MongoDB model later
-    console.log('📥 New BarkBack received:', { petName, emotion, storyText });
+    const newStory = new Story({ petName, emotion, storyText });
+    await newStory.save();
 
-    res.status(201).json({ message: 'Story received!' });
+    res.status(201).json({ message: 'Story saved!', story: newStory });
   } catch (err) {
     res.status(500).json({ message: 'Failed to save story', error: err.message });
   }
