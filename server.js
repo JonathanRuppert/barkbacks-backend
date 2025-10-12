@@ -1,6 +1,6 @@
 // server.js — BarkBacks backend entry point
 
-require('dotenv').config(); // Load environment variables from .env
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -11,8 +11,8 @@ const PORT = process.env.PORT || 10000;
 const MONGO_URI = process.env.MONGO_URI;
 
 // ✅ Middleware
-app.use(cors()); // Allow cross-origin requests (for Vercel frontend)
-app.use(express.json()); // Parse incoming JSON
+app.use(cors());
+app.use(express.json());
 
 // ✅ MongoDB Connection
 mongoose.connect(MONGO_URI, {
@@ -30,7 +30,7 @@ db.once('open', () => {
   console.log('✅ Mongoose connected to DB: barkbacks');
 });
 
-// ✅ Test Route for Frontend DebugPanel
+// ✅ Test Route for DebugPanel
 app.get('/api/test-db', async (req, res) => {
   try {
     await mongoose.connection.db.admin().ping();
@@ -47,4 +47,5 @@ app.get('/', (req, res) => {
 
 // ✅ Start Server
 app.listen(PORT, () => {
-  console
+  console.log(`🚀 BarkBacks backend running on http://localhost:${PORT}`);
+});
