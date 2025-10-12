@@ -55,6 +55,16 @@ app.post('/api/create-story', async (req, res) => {
   }
 });
 
+// ✅ BarkBack gallery fetch route
+app.get('/api/stories', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: -1 }); // newest first
+    res.json(stories);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch stories', error: err.message });
+  }
+});
+
 // ✅ Root route
 app.get('/', (req, res) => {
   res.send('🐾 BarkBacks backend is running');
