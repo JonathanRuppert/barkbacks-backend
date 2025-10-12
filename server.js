@@ -1,44 +1,50 @@
 // server.js — BarkBacks backend entry point
 
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env
+
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
+const MONGO_URI = process.env.MONGO_URI;
 
-// Middleware
-app.use(express.json());
+// ✅ Middleware
+app.use(cors()); // Allow cross-origin requests (for Vercel frontend)
+app.use(express.json()); // Parse incoming JSON
 
-// MongoDB Connection
-const mongoURI = process.env.MONGO_URI;
-
-mongoose.connect(mongoURI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-  })
-  .catch((err) => {
-    console.error('❌ Initial MongoDB connection error:', err);
-  });
-
-mongoose.connection.on('connected', () => {
-  console.log(`✅ Mongoose connected to DB: ${mongoose.connection.name}`);
+// ✅ MongoDB Connection
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 });
 
-mongoose.connection.on('error', (err) => {
-  console.error('❌ Mongoose connection error:', err);
+const db = mongoose.connection;
+
+db.on('error', (err) => {
+  console.error('❌ Initial MongoDB connection error:', err);
 });
 
-// Test Route
-app.get('/api/test-db', (req, res) => {
-  if (mongoose.connection.readyState === 1) {
+db.once('open', () => {
+  console.log('✅ Mongoose connected to DB: barkbacks');
+});
+
+// ✅ Test Route for Frontend DebugPanel
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await mongoose.connection.db.admin().ping();
     res.json({ message: 'Connected to MongoDB' });
-  } else {
-    res.status(500).json({ message: 'Not connected to MongoDB' });
+  } catch (err) {
+    res.status(500).json({ message: 'MongoDB ping failed', error: err.message });
   }
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 BarkBacks backend running on http://localhost:${PORT}`);
+// ✅ Root Route
+app.get('/', (req, res) => {
+  res.send('🐾 BarkBacks backend is running');
 });
+
+// ✅ Start Server
+app.listen(PORT, () => {
+  console
