@@ -31,6 +31,15 @@ db.once('open', () => {
   console.log('✅ Connected to MongoDB Atlas');
 });
 
+// 🍂 Helper: Determine season from date
+function getSeason(date) {
+  const month = date.getMonth(); // 0 = Jan, 11 = Dec
+  if (month >= 2 && month <= 4) return 'Spring';
+  if (month >= 5 && month <= 7) return 'Summer';
+  if (month >= 8 && month <= 10) return 'Autumn';
+  return 'Winter';
+}
+
 // ✅ Debug route for frontend heartbeat
 app.get('/api/test-db', async (req, res) => {
   try {
@@ -45,8 +54,9 @@ app.get('/api/test-db', async (req, res) => {
 app.post('/api/create-story', async (req, res) => {
   try {
     const { petName, emotion, storyText } = req.body;
+    const season = getSeason(new Date());
 
-    const newStory = new Story({ petName, emotion, storyText });
+    const newStory = new Story({ petName, emotion, storyText, season });
     await newStory.save();
 
     res.status(201).json({ message: 'Story saved!', story: newStory });
