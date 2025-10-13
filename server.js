@@ -1,213 +1,88 @@
+// server.js — BarkBacks backend with emotion remix badge logic
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const googleTTS = require('google-tts-api');
-const Story = require('./models/Story');
-
+const Story = require('./models/storyModel');
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// 🔗 MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB connected'))
-.catch((err) => console.error('❌ MongoDB connection error:', err));
-
-// 🍂 Helper: Determine season from date
-function getSeason(date) {
-  const month = date.getMonth();
-  if (month >= 2 && month <= 4) return 'Spring';
-  if (month >= 5 && month <= 7) return 'Summer';
-  if (month >= 8 && month <= 10) return 'Autumn';
-  return 'Winter';
-}
-
-// 📝 Create a new BarkBack
-app.post('/api/create-story', async (req, res) => {
-  const { petId, petName, emotion, storyText, creatorId, remixOf } = req.body;
-  const season = getSeason(new Date());
-
-  try {
-    const newStory = new Story({ petId, petName, emotion, storyText, season, creatorId, remixOf });
-    await newStory.save();
-    res.status(201).json({ message: 'Story saved successfully!' });
-  } catch (err) {
-    console.error('❌ Error saving story:', err.message);
-    res.status(500).json({ error: 'Failed to save story' });
-  }
 });
 
-// 📚 Get all BarkBacks
-app.get('/api/stories', async (req, res) => {
-  try {
-    const stories = await Story.find().sort({ createdAt: -1 });
-    res.json(stories);
-  } catch (err) {
-    console.error('❌ Error fetching stories:', err.message);
-    res.status(500).json({ error: 'Failed to fetch stories' });
-  }
-});
+// 🧠 Badge logic — remix emotion patterns
+const generateEmotionBadges = (stories) => {
+  const chains = [];
 
-// 📊 Get creator stats
-app.get('/api/stats/:creatorId', async (req, res) => {
-  const { creatorId } = req.params;
+  const buildChain = (story, all) => {
+    const chain = [];
+    let current = story;
+    while (current) {
+      chain.unshift(current);
+      current = all.find(s => s._id.toString() === current.remixOf);
+    }
+    return chain;
+  };
 
-  try {
-    const stories = await Story.find({ creatorId });
+  stories.forEach((s) => {
+    const chain = buildChain(s, stories);
+    if (chain.length >= 2) chains.push(chain);
+  });
 
-    const total = stories.length;
-    const emotions = [...new Set(stories.map(s => s.emotion))];
-    const seasons = [...new Set(stories.map(s => s.season))];
+  const badges = new Set();
 
-    res.json({ total, emotions, seasons });
-  } catch (err) {
-    console.error('❌ Error fetching stats:', err.message);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
+  chains.forEach((chain) => {
+    const emotions = chain.map(s => s.emotion);
+    const unique = [...new Set(emotions)];
 
-// 🍁 Get seasonal BarkBacks
-app.get('/api/seasonal-stories', async (req, res) => {
-  const season = getSeason(new Date());
+    if (emotions.every(e => e === 'Joy') && emotions.length >= 3) {
+      badges.add('🏅 Joy Cascade');
+    }
 
-  try {
-    const stories = await Story.find({ season }).sort({ createdAt: -1 }).limit(10);
-    res.json(stories);
-  } catch (err) {
-    console.error('❌ Error fetching seasonal stories:', err.message);
-    res.status(500).json({ error: 'Failed to fetch seasonal stories' });
-  }
-});
+    if (emotions[0] === 'Gratitude' && emotions.length >= 3) {
+      badges.add('🏅 Gratitude Spiral');
+    }
 
-// 🐾 Get stories for a specific pet
-app.get('/api/pet-stories/:petId', async (req, res) => {
-  const { petId } = req.params;
+    if (emotions.includes('Wonder') && emotions[0] !== 'Wonder' && emotions[emotions.length - 1] === 'Wonder') {
+      badges.add('🏅 Wonder Loop');
+    }
 
-  try {
-    const stories = await Story.find({ petId }).sort({ createdAt: -1 });
-    res.json(stories);
-  } catch (err) {
-    console.error('❌ Error fetching pet stories:', err.message);
-    res.status(500).json({ error: 'Failed to fetch pet stories' });
-  }
-});
+    if (emotions[0] === 'Hope' && unique.length >= 3) {
+      badges.add('🏅 Hope Divergence');
+    }
 
-// 🔊 Voice synthesis route
-app.get('/api/speak', async (req, res) => {
-  const { text, lang = 'en', slow = false } = req.query;
+    const nostalgiaCount = emotions.filter(e => e === 'Nostalgia').length;
+    if (nostalgiaCount >= 2) {
+      badges.add('🏅 Nostalgia Echo');
+    }
+  });
 
-  if (!text || text.length > 200) {
-    return res.status(400).json({ error: 'Text is required and must be under 200 characters.' });
-  }
+  return Array.from(badges);
+};
 
-  try {
-    const url = googleTTS.getAudioUrl(text, {
-      lang,
-      slow,
-      host: 'https://translate.google.com',
-    });
-
-    res.json({ audioUrl: url });
-  } catch (err) {
-    console.error('❌ Error generating speech:', err.message);
-    res.status(500).json({ error: 'Failed to generate speech' });
-  }
-});
-
-// 🏅 Creator badge logic with remix depth, influence, and diversity
+// 🔗 Route: Get emotion remix badges for a creator
 app.get('/api/badges/:creatorId', async (req, res) => {
-  const { creatorId } = req.params;
-
   try {
+    const creatorId = req.params.creatorId;
     const stories = await Story.find({ creatorId });
-
-    const emotionSet = new Set();
-    const seasonSet = new Set();
-    const remixCount = stories.filter(s => s.remixOf !== null).length;
-
-    stories.forEach((s) => {
-      emotionSet.add(s.emotion);
-      seasonSet.add(s.season);
-    });
-
-    const originals = stories.filter(s => !s.remixOf);
-    const originalIds = originals.map(s => s._id.toString());
-    const remixedByOthers = await Story.find({ remixOf: { $in: originalIds } });
-    const remixInfluence = remixedByOthers.length;
-    const remixEmotionSet = new Set(remixedByOthers.map(s => s.emotion));
-
-    const badges = [];
-
-    if (emotionSet.size >= 5) badges.push('Emotional Explorer');
-    if (seasonSet.size >= 4) badges.push('Seasonal Storyteller');
-    if (remixCount >= 3) badges.push('Remix Master');
-    if (remixInfluence >= 5) badges.push('Remix Influencer');
-    if (remixEmotionSet.size >= 4) badges.push('Remix Alchemist');
-
-    res.json({ badges });
+    const badges = generateEmotionBadges(stories);
+    res.json({ creatorId, badges });
   } catch (err) {
-    console.error('❌ Error generating badges:', err.message);
+    console.error('Error generating badges:', err);
     res.status(500).json({ error: 'Failed to generate badges' });
   }
 });
 
-// 📣 Campaign spotlight logic
-app.get('/api/campaigns/current', async (req, res) => {
-  const season = getSeason(new Date());
-  const emotionThemes = {
-    Spring: 'Hope',
-    Summer: 'Joy',
-    Autumn: 'Gratitude',
-    Winter: 'Nostalgia',
-  };
-  const emotion = emotionThemes[season] || 'Joy';
-
-  try {
-    const featured = await Story.find({ season, emotion }).sort({ createdAt: -1 }).limit(3);
-
-    const campaign = {
-      season,
-      emotion,
-      title: `${season} Spotlight: ${emotion}`,
-      callToAction: `Share your ${emotion.toLowerCase()} moment this ${season.toLowerCase()}!`,
-      featured,
-    };
-
-    res.json(campaign);
-  } catch (err) {
-    console.error('❌ Error generating campaign:', err.message);
-    res.status(500).json({ error: 'Failed to generate campaign' });
-  }
+// ✅ Health check
+app.get('/', (req, res) => {
+  res.send('BarkBacks backend is live');
 });
 
-// 🔁 Remix lineage logic
-app.get('/api/remix-lineage/:storyId', async (req, res) => {
-  const { storyId } = req.params;
-
-  try {
-    const lineage = [];
-    let current = await Story.findById(storyId);
-
-    while (current && current.remixOf) {
-      const parent = await Story.findById(current.remixOf);
-      if (!parent) break;
-      lineage.push(parent);
-      current = parent;
-    }
-
-    res.json({ lineage });
-  } catch (err) {
-    console.error('❌ Error tracing remix lineage:', err.message);
-    res.status(500).json({ error: 'Failed to trace remix lineage' });
-  }
-});
-
-// 🚀 Start server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
