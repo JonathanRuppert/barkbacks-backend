@@ -1,9 +1,8 @@
-// Story.js — MongoDB schema for BarkBacks
+// Story.js — BarkBacks story schema
 
 const mongoose = require('mongoose');
 
-// 🧬 Define the schema for each BarkBack story
-const storySchema = new mongoose.Schema({
+const StorySchema = new mongoose.Schema({
   petId: {
     type: String,
     required: true,
@@ -22,16 +21,17 @@ const storySchema = new mongoose.Schema({
   },
   season: {
     type: String,
-    default: '',
+    required: true,
   },
   creatorId: {
     type: String,
-    default: '',
+    required: true,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  remixOf: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Story',
+    default: null,
   },
-});
+}, { timestamps: true });
 
-module.exports = mongoose.model('Story', storySchema);
+module.exports = mongoose.model('Story', StorySchema);
