@@ -31,11 +31,11 @@ function getSeason(date) {
 
 // 📝 Create a new BarkBack
 app.post('/api/create-story', async (req, res) => {
-  const { petId, petName, emotion, storyText, creatorId } = req.body;
+  const { petId, petName, emotion, storyText, creatorId, remixOf } = req.body;
   const season = getSeason(new Date());
 
   try {
-    const newStory = new Story({ petId, petName, emotion, storyText, season, creatorId });
+    const newStory = new Story({ petId, petName, emotion, storyText, season, creatorId, remixOf });
     await newStory.save();
     res.status(201).json({ message: 'Story saved successfully!' });
   } catch (err) {
@@ -47,12 +47,10 @@ app.post('/api/create-story', async (req, res) => {
 // 📚 Get all BarkBacks
 app.get('/api/stories', async (req, res) => {
   try {
-    console.log('📥 /api/stories called');
     const stories = await Story.find().sort({ createdAt: -1 });
-    console.log('✅ Stories fetched:', stories.length);
     res.json(stories);
   } catch (err) {
-    console.error('❌ Error in /api/stories:', err.message);
+    console.error('❌ Error fetching stories:', err.message);
     res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
@@ -68,11 +66,7 @@ app.get('/api/stats/:creatorId', async (req, res) => {
     const emotions = [...new Set(stories.map(s => s.emotion))];
     const seasons = [...new Set(stories.map(s => s.season))];
 
-    res.json({
-      total,
-      emotions,
-      seasons,
-    });
+    res.json({ total, emotions, seasons });
   } catch (err) {
     console.error('❌ Error fetching stats:', err.message);
     res.status(500).json({ error: 'Failed to fetch stats' });
@@ -182,6 +176,28 @@ app.get('/api/campaigns/current', async (req, res) => {
   } catch (err) {
     console.error('❌ Error generating campaign:', err.message);
     res.status(500).json({ error: 'Failed to generate campaign' });
+  }
+});
+
+// 🔁 Remix lineage logic
+app.get('/api/remix-lineage/:storyId', async (req, res) => {
+  const { storyId } = req.params;
+
+  try {
+    const lineage = [];
+    let current = await Story.findById(storyId);
+
+    while (current && current.remixOf) {
+      const parent = await Story.findById(current.remixOf);
+      if (!parent) break;
+      lineage.push(parent);
+      current = parent;
+    }
+
+    res.json({ lineage });
+  } catch (err) {
+    console.error('❌ Error tracing remix lineage:', err.message);
+    res.status(500).json({ error: 'Failed to trace remix lineage' });
   }
 });
 
