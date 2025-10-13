@@ -69,3 +69,30 @@ app.get('/api/stats/:creatorId', async (req, res) => {
     const seasons = [...new Set(stories.map(s => s.season))];
 
     res.json({
+      total,
+      emotions,
+      seasons,
+    });
+  } catch (err) {
+    console.error('❌ Error fetching stats:', err.message);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// 🍁 Get seasonal BarkBacks
+app.get('/api/seasonal-stories', async (req, res) => {
+  const season = getSeason(new Date());
+
+  try {
+    const stories = await Story.find({ season }).sort({ createdAt: -1 }).limit(10);
+    res.json(stories);
+  } catch (err) {
+    console.error('❌ Error fetching seasonal stories:', err.message);
+    res.status(500).json({ error: 'Failed to fetch seasonal stories' });
+  }
+});
+
+// 🚀 Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
