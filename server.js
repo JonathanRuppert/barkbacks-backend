@@ -1,21 +1,31 @@
-// server.js — BarkBacks backend with emotion remix badge logic
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-app.use(cors());
+// ✅ Explicit CORS setup
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST'],
+}));
 app.use(express.json());
 
-// ✅ MongoDB connection using MONGODB_URI
+// ✅ MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
-// 🧠 Badge logic — remix emotion patterns
+// ✅ Connection logging
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB connected');
+});
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err);
+});
+
+// 🧠 Badge logic
 const generateEmotionBadges = (stories) => {
   const chains = [];
 
@@ -65,7 +75,7 @@ const generateEmotionBadges = (stories) => {
   return Array.from(badges);
 };
 
-// 🔗 Route: Get emotion remix badges for a creator
+// 🔗 Route: Get emotion remix badges
 app.get('/api/badges/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
@@ -96,7 +106,7 @@ app.get('/', (req, res) => {
   res.send('BarkBacks backend is live');
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
