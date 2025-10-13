@@ -156,6 +156,35 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   }
 });
 
+// 📣 Campaign spotlight logic
+app.get('/api/campaigns/current', async (req, res) => {
+  const season = getSeason(new Date());
+  const emotionThemes = {
+    Spring: 'Hope',
+    Summer: 'Joy',
+    Autumn: 'Gratitude',
+    Winter: 'Nostalgia',
+  };
+  const emotion = emotionThemes[season] || 'Joy';
+
+  try {
+    const featured = await Story.find({ season, emotion }).sort({ createdAt: -1 }).limit(3);
+
+    const campaign = {
+      season,
+      emotion,
+      title: `${season} Spotlight: ${emotion}`,
+      callToAction: `Share your ${emotion.toLowerCase()} moment this ${season.toLowerCase()}!`,
+      featured,
+    };
+
+    res.json(campaign);
+  } catch (err) {
+    console.error('❌ Error generating campaign:', err.message);
+    res.status(500).json({ error: 'Failed to generate campaign' });
+  }
+});
+
 // 🚀 Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
