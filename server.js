@@ -4,10 +4,11 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ Explicit CORS setup
+// ✅ Explicit CORS setup for Vercel frontend
 app.use(cors({
-  origin: '*',
+  origin: 'https://barkbacks-dashboard.vercel.app',
   methods: ['GET', 'POST'],
+  credentials: true
 }));
 app.use(express.json());
 
