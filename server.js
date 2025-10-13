@@ -88,12 +88,12 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   }
 });
 
-// 🔗 Route: Get all stories (safe serialization with .lean())
+// 🔗 Route: Get all stories (with raw data logging)
 app.get('/api/stories', async (req, res) => {
   try {
     console.log('Fetching stories...');
     const stories = await Story.find({}).lean();
-    console.log('Stories found:', stories.length);
+    console.log('Raw stories:', JSON.stringify(stories, null, 2));
 
     if (!Array.isArray(stories)) {
       console.error('Stories is not an array:', stories);
