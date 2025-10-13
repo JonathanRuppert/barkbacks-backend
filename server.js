@@ -17,8 +17,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected'))
-.catch((err) => console.error('MongoDB connection error:', err));
+.then(() => console.log('✅ MongoDB connected'))
+.catch((err) => console.error('❌ MongoDB connection error:', err));
 
 // 🍂 Helper: Determine season from date
 function getSeason(date) {
@@ -39,7 +39,7 @@ app.post('/api/create-story', async (req, res) => {
     await newStory.save();
     res.status(201).json({ message: 'Story saved successfully!' });
   } catch (err) {
-    console.error('Error saving story:', err);
+    console.error('❌ Error saving story:', err.message);
     res.status(500).json({ error: 'Failed to save story' });
   }
 });
@@ -47,12 +47,12 @@ app.post('/api/create-story', async (req, res) => {
 // 📚 Get all BarkBacks
 app.get('/api/stories', async (req, res) => {
   try {
-    console.log('Fetching stories...');
+    console.log('📥 /api/stories called');
     const stories = await Story.find().sort({ createdAt: -1 });
-    console.log('Stories fetched:', stories.length);
+    console.log('✅ Stories fetched:', stories.length);
     res.json(stories);
   } catch (err) {
-    console.error('Error in /api/stories:', err.message);
+    console.error('❌ Error in /api/stories:', err.message);
     res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
@@ -74,12 +74,12 @@ app.get('/api/stats/:creatorId', async (req, res) => {
       seasons,
     });
   } catch (err) {
-    console.error('Error fetching stats:', err);
+    console.error('❌ Error fetching stats:', err.message);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 
 // 🚀 Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
