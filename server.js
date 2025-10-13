@@ -4,11 +4,20 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ Explicit CORS headers for Vercel frontend
+// ✅ CORS middleware — allow Vercel frontend and handle preflight
+const allowedOrigins = ['https://barkbacks-dashboard.vercel.app'];
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'https://barkbacks-dashboard.vercel.app');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
