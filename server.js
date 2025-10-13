@@ -88,13 +88,31 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   }
 });
 
-// 🔗 Route: Get all stories
+// 🔗 Route: Get all stories (safe serialization)
 app.get('/api/stories', async (req, res) => {
   try {
     console.log('Fetching stories...');
     const stories = await Story.find({});
     console.log('Stories found:', stories.length);
-    res.json(stories);
+
+    if (!Array.isArray(stories)) {
+      console.error('Stories is not an array:', stories);
+      return res.status(500).json({ error: 'Invalid stories format' });
+    }
+
+    // Strip Mongoose methods and ensure clean JSON
+    const safeStories = stories.map(s => ({
+      _id: s._id,
+      petName: s.petName,
+      emotion: s.emotion,
+      storyText: s.storyText,
+      season: s.season,
+      createdAt: s.createdAt,
+      remixOf: s.remixOf,
+      creatorId: s.creatorId
+    }));
+
+    res.json(safeStories);
   } catch (err) {
     console.error('Error fetching stories:', err);
     res.status(500).json({ error: 'Failed to fetch stories' });
