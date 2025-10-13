@@ -6,25 +6,28 @@ const mongoose = require('mongoose');
 const storySchema = new mongoose.Schema({
   petName: {
     type: String,
-    required: true, // Pet name is mandatory
+    required: true,
   },
   emotion: {
     type: String,
-    required: true, // Emotion tag is mandatory
+    required: true,
   },
   storyText: {
     type: String,
-    required: true, // Story content is mandatory
+    required: true,
   },
   season: {
     type: String,
-    default: '', // Automatically set based on submission date
+    default: '',
+  },
+  creatorId: {
+    type: String,
+    default: '',
   },
   createdAt: {
     type: Date,
-    default: Date.now, // Timestamp of when the story was submitted
+    default: Date.now,
   },
 });
 
-// 🧠 Export the model so it can be used in server.js
 module.exports = mongoose.model('Story', storySchema);
