@@ -1,5 +1,3 @@
-// server.js — BarkBacks backend API
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -121,7 +119,7 @@ app.get('/api/speak', async (req, res) => {
   }
 });
 
-// 🏅 Creator badge logic
+// 🏅 Creator badge logic with remix depth, influence, and diversity
 app.get('/api/badges/:creatorId', async (req, res) => {
   const { creatorId } = req.params;
 
@@ -130,18 +128,26 @@ app.get('/api/badges/:creatorId', async (req, res) => {
 
     const emotionSet = new Set();
     const seasonSet = new Set();
-    const remixCount = stories.filter(s => s.storyText.includes('Remix')).length;
+    const remixCount = stories.filter(s => s.remixOf !== null).length;
 
     stories.forEach((s) => {
       emotionSet.add(s.emotion);
       seasonSet.add(s.season);
     });
 
+    const originals = stories.filter(s => !s.remixOf);
+    const originalIds = originals.map(s => s._id.toString());
+    const remixedByOthers = await Story.find({ remixOf: { $in: originalIds } });
+    const remixInfluence = remixedByOthers.length;
+    const remixEmotionSet = new Set(remixedByOthers.map(s => s.emotion));
+
     const badges = [];
 
     if (emotionSet.size >= 5) badges.push('Emotional Explorer');
     if (seasonSet.size >= 4) badges.push('Seasonal Storyteller');
     if (remixCount >= 3) badges.push('Remix Master');
+    if (remixInfluence >= 5) badges.push('Remix Influencer');
+    if (remixEmotionSet.size >= 4) badges.push('Remix Alchemist');
 
     res.json({ badges });
   } catch (err) {
