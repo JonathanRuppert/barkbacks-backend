@@ -69,17 +69,3 @@ app.get('/api/stats/:creatorId', async (req, res) => {
     const seasons = [...new Set(stories.map(s => s.season))];
 
     res.json({
-      total,
-      emotions,
-      seasons,
-    });
-  } catch (err) {
-    console.error('❌ Error fetching stats:', err.message);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
-
-// 🚀 Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
