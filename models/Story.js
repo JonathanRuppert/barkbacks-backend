@@ -4,6 +4,10 @@ const mongoose = require('mongoose');
 
 // 🧬 Define the schema for each BarkBack story
 const storySchema = new mongoose.Schema({
+  petId: {
+    type: String,
+    required: true,
+  },
   petName: {
     type: String,
     required: true,

@@ -31,11 +31,11 @@ function getSeason(date) {
 
 // 📝 Create a new BarkBack
 app.post('/api/create-story', async (req, res) => {
-  const { petName, emotion, storyText, creatorId } = req.body;
+  const { petId, petName, emotion, storyText, creatorId } = req.body;
   const season = getSeason(new Date());
 
   try {
-    const newStory = new Story({ petName, emotion, storyText, season, creatorId });
+    const newStory = new Story({ petId, petName, emotion, storyText, season, creatorId });
     await newStory.save();
     res.status(201).json({ message: 'Story saved successfully!' });
   } catch (err) {
@@ -89,6 +89,19 @@ app.get('/api/seasonal-stories', async (req, res) => {
   } catch (err) {
     console.error('❌ Error fetching seasonal stories:', err.message);
     res.status(500).json({ error: 'Failed to fetch seasonal stories' });
+  }
+});
+
+// 🐾 Get stories for a specific pet
+app.get('/api/pet-stories/:petId', async (req, res) => {
+  const { petId } = req.params;
+
+  try {
+    const stories = await Story.find({ petId }).sort({ createdAt: -1 });
+    res.json(stories);
+  } catch (err) {
+    console.error('❌ Error fetching pet stories:', err.message);
+    res.status(500).json({ error: 'Failed to fetch pet stories' });
   }
 });
 
