@@ -81,7 +81,9 @@ app.get('/api/badges/:creatorId', async (req, res) => {
 // 🔗 Route: Get all stories
 app.get('/api/stories', async (req, res) => {
   try {
+    console.log('Fetching stories...');
     const stories = await Story.find({});
+    console.log('Stories found:', stories.length);
     res.json(stories);
   } catch (err) {
     console.error('Error fetching stories:', err);
