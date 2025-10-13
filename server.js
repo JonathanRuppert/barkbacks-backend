@@ -4,12 +4,14 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ Explicit CORS setup for Vercel frontend
-app.use(cors({
-  origin: 'https://barkbacks-dashboard.vercel.app',
-  methods: ['GET', 'POST'],
-  credentials: true
-}));
+// ✅ Explicit CORS headers for Vercel frontend
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://barkbacks-dashboard.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 app.use(express.json());
 
 // ✅ MongoDB connection
