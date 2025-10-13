@@ -1,6 +1,5 @@
 // server.js — BarkBacks backend with emotion remix badge logic
 
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Corrected MongoDB connection using MONGODB_URI
+// ✅ MongoDB connection using MONGODB_URI
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
