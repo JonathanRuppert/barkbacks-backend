@@ -79,7 +79,7 @@ const generateEmotionBadges = (stories) => {
 app.get('/api/badges/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
-    const stories = await Story.find({ creatorId });
+    const stories = await Story.find({ creatorId }).lean();
     const badges = generateEmotionBadges(stories);
     res.json({ creatorId, badges });
   } catch (err) {
@@ -88,11 +88,11 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   }
 });
 
-// 🔗 Route: Get all stories (safe serialization)
+// 🔗 Route: Get all stories (safe serialization with .lean())
 app.get('/api/stories', async (req, res) => {
   try {
     console.log('Fetching stories...');
-    const stories = await Story.find({});
+    const stories = await Story.find({}).lean();
     console.log('Stories found:', stories.length);
 
     if (!Array.isArray(stories)) {
@@ -100,19 +100,7 @@ app.get('/api/stories', async (req, res) => {
       return res.status(500).json({ error: 'Invalid stories format' });
     }
 
-    // Strip Mongoose methods and ensure clean JSON
-    const safeStories = stories.map(s => ({
-      _id: s._id,
-      petName: s.petName,
-      emotion: s.emotion,
-      storyText: s.storyText,
-      season: s.season,
-      createdAt: s.createdAt,
-      remixOf: s.remixOf,
-      creatorId: s.creatorId
-    }));
-
-    res.json(safeStories);
+    res.json(stories);
   } catch (err) {
     console.error('Error fetching stories:', err);
     res.status(500).json({ error: 'Failed to fetch stories' });
