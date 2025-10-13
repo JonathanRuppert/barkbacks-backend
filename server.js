@@ -1,5 +1,6 @@
 // server.js — BarkBacks backend with emotion remix badge logic
 
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -75,6 +76,17 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   } catch (err) {
     console.error('Error generating badges:', err);
     res.status(500).json({ error: 'Failed to generate badges' });
+  }
+});
+
+// 🔗 Route: Get all stories
+app.get('/api/stories', async (req, res) => {
+  try {
+    const stories = await Story.find({});
+    res.json(stories);
+  } catch (err) {
+    console.error('Error fetching stories:', err);
+    res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
 
