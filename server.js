@@ -1,3 +1,5 @@
+// server.js — BarkBacks backend API
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,6 +12,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// 🔗 MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -17,6 +20,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('✅ MongoDB connected'))
 .catch((err) => console.error('❌ MongoDB connection error:', err));
 
+// 🍂 Helper: Determine season from date
 function getSeason(date) {
   const month = date.getMonth();
   if (month >= 2 && month <= 4) return 'Spring';
@@ -25,6 +29,7 @@ function getSeason(date) {
   return 'Winter';
 }
 
+// 📝 Create a new BarkBack
 app.post('/api/create-story', async (req, res) => {
   const { petId, petName, emotion, storyText, creatorId } = req.body;
   const season = getSeason(new Date());
@@ -39,6 +44,7 @@ app.post('/api/create-story', async (req, res) => {
   }
 });
 
+// 📚 Get all BarkBacks
 app.get('/api/stories', async (req, res) => {
   try {
     console.log('📥 /api/stories called');
@@ -51,6 +57,7 @@ app.get('/api/stories', async (req, res) => {
   }
 });
 
+// 📊 Get creator stats
 app.get('/api/stats/:creatorId', async (req, res) => {
   const { creatorId } = req.params;
 
@@ -72,6 +79,7 @@ app.get('/api/stats/:creatorId', async (req, res) => {
   }
 });
 
+// 🍁 Get seasonal BarkBacks
 app.get('/api/seasonal-stories', async (req, res) => {
   const season = getSeason(new Date());
 
@@ -84,6 +92,7 @@ app.get('/api/seasonal-stories', async (req, res) => {
   }
 });
 
+// 🐾 Get stories for a specific pet
 app.get('/api/pet-stories/:petId', async (req, res) => {
   const { petId } = req.params;
 
@@ -118,6 +127,36 @@ app.get('/api/speak', async (req, res) => {
   }
 });
 
+// 🏅 Creator badge logic
+app.get('/api/badges/:creatorId', async (req, res) => {
+  const { creatorId } = req.params;
+
+  try {
+    const stories = await Story.find({ creatorId });
+
+    const emotionSet = new Set();
+    const seasonSet = new Set();
+    const remixCount = stories.filter(s => s.storyText.includes('Remix')).length;
+
+    stories.forEach((s) => {
+      emotionSet.add(s.emotion);
+      seasonSet.add(s.season);
+    });
+
+    const badges = [];
+
+    if (emotionSet.size >= 5) badges.push('Emotional Explorer');
+    if (seasonSet.size >= 4) badges.push('Seasonal Storyteller');
+    if (remixCount >= 3) badges.push('Remix Master');
+
+    res.json({ badges });
+  } catch (err) {
+    console.error('❌ Error generating badges:', err.message);
+    res.status(500).json({ error: 'Failed to generate badges' });
+  }
+});
+
+// 🚀 Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
