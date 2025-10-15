@@ -4,7 +4,7 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ Verified CORS middleware for Render compatibility
+// ✅ Verified CORS middleware for Render + Vercel
 const allowedOrigins = ['https://barkbacks-dashboard.vercel.app'];
 
 app.use(cors({
@@ -28,7 +28,6 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
 });
 
-// ✅ Connection logging
 mongoose.connection.on('connected', () => {
   console.log('✅ MongoDB connected');
 });
@@ -91,4 +90,39 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
     const stories = await Story.find({ creatorId }).lean();
-    const badges = generateEmotionBadges(st
+    const badges = generateEmotionBadges(stories);
+    res.json({ creatorId, badges });
+  } catch (err) {
+    console.error('Error generating badges:', err);
+    res.status(500).json({ error: 'Failed to generate badges' });
+  }
+});
+
+// 🔗 Route: Get all stories
+app.get('/api/stories', async (req, res) => {
+  try {
+    console.log('Fetching stories...');
+    const stories = await Story.find({}).lean();
+    console.log('Raw stories:', JSON.stringify(stories, null, 2));
+
+    if (!Array.isArray(stories)) {
+      console.error('Stories is not an array:', stories);
+      return res.status(500).json({ error: 'Invalid stories format' });
+    }
+
+    res.json(stories);
+  } catch (err) {
+    console.error('Error fetching stories:', err);
+    res.status(500).json({ error: 'Failed to fetch stories' });
+  }
+});
+
+// ✅ Health check
+app.get('/', (req, res) => {
+  res.send('BarkBacks backend is live');
+});
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
