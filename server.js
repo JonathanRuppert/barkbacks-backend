@@ -4,22 +4,21 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ CORS middleware — allow Vercel frontend and handle preflight
+// ✅ Verified CORS middleware for Render compatibility
 const allowedOrigins = ['https://barkbacks-dashboard.vercel.app'];
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-  next();
-});
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true,
+}));
 
 app.use(express.json());
 
@@ -92,39 +91,4 @@ app.get('/api/badges/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
     const stories = await Story.find({ creatorId }).lean();
-    const badges = generateEmotionBadges(stories);
-    res.json({ creatorId, badges });
-  } catch (err) {
-    console.error('Error generating badges:', err);
-    res.status(500).json({ error: 'Failed to generate badges' });
-  }
-});
-
-// 🔗 Route: Get all stories (with raw data logging)
-app.get('/api/stories', async (req, res) => {
-  try {
-    console.log('Fetching stories...');
-    const stories = await Story.find({}).lean();
-    console.log('Raw stories:', JSON.stringify(stories, null, 2));
-
-    if (!Array.isArray(stories)) {
-      console.error('Stories is not an array:', stories);
-      return res.status(500).json({ error: 'Invalid stories format' });
-    }
-
-    res.json(stories);
-  } catch (err) {
-    console.error('Error fetching stories:', err);
-    res.status(500).json({ error: 'Failed to fetch stories' });
-  }
-});
-
-// ✅ Health check
-app.get('/', (req, res) => {
-  res.send('BarkBacks backend is live');
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    const badges = generateEmotionBadges(st
