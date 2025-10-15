@@ -4,7 +4,7 @@ const cors = require('cors');
 const Story = require('./models/storyModel');
 const app = express();
 
-// ✅ Verified CORS middleware for Render + Vercel
+// ✅ Apply CORS middleware FIRST
 const allowedOrigins = ['https://barkbacks-dashboard.vercel.app'];
 
 app.use(cors({
@@ -17,6 +17,8 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+app.options('*', cors()); // ✅ Handle preflight requests
 
 app.use(express.json());
 
