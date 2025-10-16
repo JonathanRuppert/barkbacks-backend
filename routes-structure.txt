@@ -1,0 +1,14 @@
+Folder PATH listing for volume Fantom Drives
+Volume serial number is C402-43D2
+H:\BARKBACKS-BACKEND\ROUTES
+    animateRoutes.js
+    animationRoutes.js
+    creatorRoutes.js
+    imageRoutes.js
+    promptRoutes.js
+    renderRoutes.js
+    storyRoutes.js
+    submitRoutes.js
+    
+No subfolders exist 
+
