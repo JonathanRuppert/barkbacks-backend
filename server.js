@@ -1,13 +1,13 @@
-require('dotenv').config(); // ✅ Load .env variables
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Story = require('./models/storyModel');
-const petsRouter = require('./routes/pets'); // ✅ Modular pet route
+const petsRouter = require('./routes/pets');
 const app = express();
 
-// ✅ CORS middleware
+// ✅ CORS setup
 app.use(cors({
   origin: 'https://barkbacks-dashboard.vercel.app',
   credentials: true,
@@ -79,7 +79,7 @@ const generateEmotionBadges = (stories) => {
 };
 
 // 🔗 Routes
-app.use('/api/pets', petsRouter); // ✅ Pet dashboard sync
+app.use('/api/pets', petsRouter);
 
 app.get('/api/badges/:creatorId', async (req, res) => {
   try {
@@ -100,6 +100,24 @@ app.get('/api/stories', async (req, res) => {
   } catch (err) {
     console.error('Error fetching stories:', err);
     res.status(500).json({ error: 'Failed to fetch stories' });
+  }
+});
+
+app.post('/api/stories', async (req, res) => {
+  try {
+    const { creatorId, text, emotion, remixOf } = req.body;
+
+    if (!creatorId || !text || !emotion) {
+      return res.status(400).json({ error: 'creatorId, text, and emotion are required' });
+    }
+
+    const newStory = new Story({ creatorId, text, emotion, remixOf });
+    await newStory.save();
+
+    res.status(200).json({ message: 'Story submitted', story: newStory });
+  } catch (err) {
+    console.error('Error submitting story:', err);
+    res.status(500).json({ error: 'Failed to submit story' });
   }
 });
 
