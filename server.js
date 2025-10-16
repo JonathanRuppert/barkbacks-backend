@@ -7,7 +7,7 @@ const Story = require('./models/storyModel');
 const petsRouter = require('./routes/pets');
 const app = express();
 
-// ✅ CORS setup
+// ✅ CORS setup for Vercel frontend
 app.use(cors({
   origin: 'https://barkbacks-dashboard.vercel.app',
   credentials: true,
@@ -81,18 +81,6 @@ const generateEmotionBadges = (stories) => {
 // 🔗 Routes
 app.use('/api/pets', petsRouter);
 
-app.get('/api/badges/:creatorId', async (req, res) => {
-  try {
-    const creatorId = req.params.creatorId;
-    const stories = await Story.find({ creatorId }).lean();
-    const badges = generateEmotionBadges(stories);
-    res.json({ creatorId, badges });
-  } catch (err) {
-    console.error('Error generating badges:', err);
-    res.status(500).json({ error: 'Failed to generate badges' });
-  }
-});
-
 app.get('/api/stories', async (req, res) => {
   try {
     const stories = await Story.find({}).lean();
@@ -118,6 +106,18 @@ app.post('/api/stories', async (req, res) => {
   } catch (err) {
     console.error('Error submitting story:', err);
     res.status(500).json({ error: 'Failed to submit story' });
+  }
+});
+
+app.get('/api/badges/:creatorId', async (req, res) => {
+  try {
+    const creatorId = req.params.creatorId;
+    const stories = await Story.find({ creatorId }).lean();
+    const badges = generateEmotionBadges(stories);
+    res.json({ creatorId, badges });
+  } catch (err) {
+    console.error('Error generating badges:', err);
+    res.status(500).json({ error: 'Failed to generate badges' });
   }
 });
 
