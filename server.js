@@ -50,13 +50,16 @@ app.post('/api/stories', async (req, res) => {
   }
 });
 
-// GET EchoDepth remix trees (branching support)
+// GET EchoDepth remix trees (branching support + debug)
 app.get('/api/echodepth/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
     const stories = await Story.find({
       creatorId: { $regex: new RegExp(`^${creatorId}$`, 'i') }
     }).lean();
+
+    console.log(`EchoDepth route hit for creatorId: ${creatorId}`);
+    console.log(`Total stories found: ${stories.length}`);
 
     const storyMap = new Map();
     stories.forEach(s => storyMap.set(s._id.toString(), s));
@@ -68,13 +71,13 @@ app.get('/api/echodepth/:creatorId', async (req, res) => {
       let current = story;
       while (current) {
         chain.unshift(current);
-        current = current.remixOf ? storyMap.get(current.remixOf) : null;
+        current = current.remixOf ? storyMap.get(current.remixOf.toString()) : null;
       }
       return chain;
     };
 
     stories.forEach(s => {
-      if (s.remixOf && storyMap.has(s.remixOf)) {
+      if (s.remixOf && storyMap.has(s.remixOf.toString())) {
         const chain = buildChain(s);
         if (chain.length >= 2) {
           chains.push({
@@ -87,6 +90,7 @@ app.get('/api/echodepth/:creatorId', async (req, res) => {
       }
     });
 
+    console.log(`Chains built: ${chains.length}`);
     res.json({ creatorId, chains });
   } catch (err) {
     console.error('Error generating EchoDepth:', err);
