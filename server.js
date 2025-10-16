@@ -104,4 +104,5 @@ app.get('/api/stories', async (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.send
+  res.send('BarkBacks backend is live');
+});
