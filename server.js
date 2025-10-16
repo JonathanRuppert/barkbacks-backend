@@ -4,7 +4,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Story = require('./models/storyModel');
-const petsRouter = require('./routes/pets'); // ✅ New route
+const petsRouter = require('./routes/pets'); // ✅ Modular pet route
 const app = express();
 
 // ✅ CORS middleware
@@ -79,7 +79,7 @@ const generateEmotionBadges = (stories) => {
 };
 
 // 🔗 Routes
-app.use('/api/pets', petsRouter); // ✅ New route
+app.use('/api/pets', petsRouter); // ✅ Pet dashboard sync
 
 app.get('/api/badges/:creatorId', async (req, res) => {
   try {
@@ -105,4 +105,10 @@ app.get('/api/stories', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.send('BarkBacks backend is live');
+});
+
+// ✅ Render-compatible port binding
+const PORT = process.env.PORT;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
