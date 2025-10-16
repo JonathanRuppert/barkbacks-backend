@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Story = require('./models/storyModel');
+const petsRouter = require('./routes/pets'); // ✅ NEW
 const app = express();
 
 // ✅ CORS middleware
@@ -76,6 +77,8 @@ const generateEmotionBadges = (stories) => {
 };
 
 // 🔗 Routes
+app.use('/api/pets', petsRouter); // ✅ NEW
+
 app.get('/api/badges/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
