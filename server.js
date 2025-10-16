@@ -50,7 +50,7 @@ app.post('/api/stories', async (req, res) => {
   }
 });
 
-// GET EchoDepth remix chains (case-insensitive creatorId)
+// GET EchoDepth remix trees (branching support)
 app.get('/api/echodepth/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
@@ -58,27 +58,32 @@ app.get('/api/echodepth/:creatorId', async (req, res) => {
       creatorId: { $regex: new RegExp(`^${creatorId}$`, 'i') }
     }).lean();
 
+    const storyMap = new Map();
+    stories.forEach(s => storyMap.set(s._id.toString(), s));
+
     const chains = [];
 
-    const buildChain = (story, all) => {
+    const buildChain = (story) => {
       const chain = [];
       let current = story;
       while (current) {
         chain.unshift(current);
-        current = all.find(s => s._id.toString() === current.remixOf);
+        current = current.remixOf ? storyMap.get(current.remixOf) : null;
       }
       return chain;
     };
 
-    stories.forEach((s) => {
-      const chain = buildChain(s, stories);
-      if (chain.length >= 2) {
-        chains.push({
-          depth: chain.length,
-          emotions: chain.map(s => s.emotion),
-          storyIds: chain.map(s => s._id),
-          texts: chain.map(s => s.text),
-        });
+    stories.forEach(s => {
+      if (s.remixOf && storyMap.has(s.remixOf)) {
+        const chain = buildChain(s);
+        if (chain.length >= 2) {
+          chains.push({
+            depth: chain.length,
+            emotions: chain.map(s => s.emotion),
+            storyIds: chain.map(s => s._id),
+            texts: chain.map(s => s.text),
+          });
+        }
       }
     });
 
