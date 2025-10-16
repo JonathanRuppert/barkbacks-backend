@@ -1,5 +1,3 @@
-// storyModel.js — Mongoose schema for BarkBacks stories
-
 const mongoose = require('mongoose');
 
 const storySchema = new mongoose.Schema({
@@ -7,31 +5,27 @@ const storySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  petId: {
-    type: String,
-    required: true,
-  },
-  storyText: {
+  text: {
     type: String,
     required: true,
   },
   emotion: {
     type: String,
     required: true,
-    enum: ['Joy', 'Gratitude', 'Wonder', 'Hope', 'Nostalgia', 'Love'],
-  },
-  season: {
-    type: String,
-    enum: ['Spring', 'Summer', 'Autumn', 'Winter'],
   },
   remixOf: {
-    type: String, // references original story ID
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Story',
     default: null,
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
+  petName: {
+    type: String,
+    default: '',
   },
+}, {
+  timestamps: true,
 });
 
-module.exports = mongoose.model('Story', storySchema);
+const Story = mongoose.model('Story', storySchema);
+
+module.exports = Story;
