@@ -50,11 +50,13 @@ app.post('/api/stories', async (req, res) => {
   }
 });
 
-// GET EchoDepth remix chains
+// GET EchoDepth remix chains (case-insensitive creatorId)
 app.get('/api/echodepth/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
-    const stories = await Story.find({ creatorId }).lean();
+    const stories = await Story.find({
+      creatorId: { $regex: new RegExp(`^${creatorId}$`, 'i') }
+    }).lean();
 
     const chains = [];
 
