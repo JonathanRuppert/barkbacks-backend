@@ -282,7 +282,9 @@ app.get('/api/remix-constellation/:creatorId', async (req, res) => {
     const remixMap = {};
     remixes.forEach(r => {
       const target = r.creatorId;
-      remixMap[target] = (remixMap[target] || 0) + 1;
+      if (target) {
+        remixMap[target] = (remixMap[target] || 0) + 1;
+      }
     });
 
     const connections = Object.entries(remixMap).map(([target, remixCount]) => ({
