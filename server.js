@@ -199,6 +199,34 @@ app.get('/api/nova', async (req, res) => {
   }
 });
 
+// GET Fusion: stories with multiple emotions
+app.get('/api/fusion', async (req, res) => {
+  try {
+    const stories = await Story.find({ emotion: { $type: 'array' } }).lean();
+
+    const storyMap = new Map();
+    stories.forEach(s => storyMap.set(s._id.toString(), s));
+
+    const withDepth = stories.map(s => {
+      let depth = 1;
+      let current = s;
+      while (current.remixOf && storyMap.has(current.remixOf.toString())) {
+        depth++;
+        current = storyMap.get(current.remixOf.toString());
+      }
+      return {
+        ...s,
+        depth,
+      };
+    });
+
+    res.json({ fusions: withDepth });
+  } catch (err) {
+    console.error('Error generating Fusion:', err);
+    res.status(500).json({ error: 'Failed to generate Fusion' });
+  }
+});
+
 // GET all unique pet names
 app.get('/api/pets', async (req, res) => {
   try {
