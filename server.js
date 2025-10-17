@@ -6,11 +6,9 @@ const Story = require('./models/storyModel');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'your-mongodb-connection-string', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -18,15 +16,12 @@ mongoose.connect(process.env.MONGODB_URI || 'your-mongodb-connection-string', {
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
 
-// Routes
-
 // GET all stories
 app.get('/api/stories', async (req, res) => {
   try {
     const stories = await Story.find().sort({ createdAt: -1 });
     res.json(stories);
   } catch (err) {
-    console.error('Error fetching stories:', err);
     res.status(500).json({ error: 'Failed to fetch stories' });
   }
 });
@@ -35,32 +30,24 @@ app.get('/api/stories', async (req, res) => {
 app.post('/api/stories', async (req, res) => {
   try {
     const { creatorId, text, emotion, remixOf, petName } = req.body;
-
     if (!creatorId || !text || !emotion) {
       return res.status(400).json({ error: 'creatorId, text, and emotion are required' });
     }
-
     const newStory = new Story({ creatorId, text, emotion, remixOf, petName });
     await newStory.save();
-
     res.status(200).json({ message: 'Story submitted', story: newStory });
   } catch (err) {
-    console.error('Error submitting story:', err);
     res.status(500).json({ error: 'Failed to submit story' });
   }
 });
 
-// GET EchoDepth remix trees (per creator)
+// EchoDepth
 app.get('/api/echodepth/:creatorId', async (req, res) => {
   try {
     const creatorId = req.params.creatorId;
-    const stories = await Story.find({
-      creatorId: { $regex: new RegExp(`^${creatorId}$`, 'i') }
-    }).lean();
-
+    const stories = await Story.find({ creatorId: { $regex: new RegExp(`^${creatorId}$`, 'i') } }).lean();
     const storyMap = new Map();
     stories.forEach(s => storyMap.set(s._id.toString(), s));
-
     const chains = [];
 
     const buildChain = (story) => {
@@ -89,18 +76,16 @@ app.get('/api/echodepth/:creatorId', async (req, res) => {
 
     res.json({ creatorId, chains });
   } catch (err) {
-    console.error('Error generating EchoDepth:', err);
     res.status(500).json({ error: 'Failed to generate EchoDepth' });
   }
 });
 
-// GET Cascade remix chains (all creators)
+// Cascade
 app.get('/api/cascade', async (req, res) => {
   try {
     const stories = await Story.find().lean();
     const storyMap = new Map();
     stories.forEach(s => storyMap.set(s._id.toString(), s));
-
     const chains = [];
 
     const buildChain = (story) => {
@@ -130,17 +115,15 @@ app.get('/api/cascade', async (req, res) => {
 
     res.json({ chains });
   } catch (err) {
-    console.error('Error generating Cascade:', err);
     res.status(500).json({ error: 'Failed to generate Cascade' });
   }
 });
 
-// GET OrbitTrail stories by emotion
+// OrbitTrail
 app.get('/api/orbittrail/:emotion', async (req, res) => {
   try {
     const emotion = req.params.emotion;
     const stories = await Story.find({ emotion: { $regex: new RegExp(`^${emotion}$`, 'i') } }).lean();
-
     const storyMap = new Map();
     stories.forEach(s => storyMap.set(s._id.toString(), s));
 
@@ -151,25 +134,20 @@ app.get('/api/orbittrail/:emotion', async (req, res) => {
         depth++;
         current = storyMap.get(current.remixOf.toString());
       }
-      return {
-        ...s,
-        depth,
-      };
+      return { ...s, depth };
     });
 
     res.json({ emotion, stories: withDepth });
   } catch (err) {
-    console.error('Error generating OrbitTrail:', err);
     res.status(500).json({ error: 'Failed to generate OrbitTrail' });
   }
 });
 
-// GET Nova: stories with highest remix activity
+// Nova
 app.get('/api/nova', async (req, res) => {
   try {
     const stories = await Story.find().lean();
     const remixCounts = {};
-
     stories.forEach(s => {
       if (s.remixOf) {
         const parentId = s.remixOf.toString();
@@ -194,16 +172,14 @@ app.get('/api/nova', async (req, res) => {
 
     res.json({ novas: novaStories });
   } catch (err) {
-    console.error('Error generating Nova:', err);
     res.status(500).json({ error: 'Failed to generate Nova' });
   }
 });
 
-// GET Fusion: stories with multiple emotions
+// Fusion
 app.get('/api/fusion', async (req, res) => {
   try {
     const stories = await Story.find({ emotion: { $type: 'array' } }).lean();
-
     const storyMap = new Map();
     stories.forEach(s => storyMap.set(s._id.toString(), s));
 
@@ -214,34 +190,25 @@ app.get('/api/fusion', async (req, res) => {
         depth++;
         current = storyMap.get(current.remixOf.toString());
       }
-      return {
-        ...s,
-        depth,
-      };
+      return { ...s, depth };
     });
 
     res.json({ fusions: withDepth });
   } catch (err) {
-    console.error('Error generating Fusion:', err);
     res.status(500).json({ error: 'Failed to generate Fusion' });
   }
 });
 
-// GET ChronoPulse: emotional activity over time
+// ChronoPulse
 app.get('/api/chronopulse', async (req, res) => {
   try {
     const stories = await Story.find().lean();
-
     const timelineMap = new Map();
 
     stories.forEach(s => {
       const date = new Date(s.createdAt).toISOString().split('T')[0];
       const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
-
-      if (!timelineMap.has(date)) {
-        timelineMap.set(date, {});
-      }
-
+      if (!timelineMap.has(date)) timelineMap.set(date, {});
       const emotionCounts = timelineMap.get(date);
       emotions.forEach(e => {
         const key = e.trim();
@@ -255,12 +222,11 @@ app.get('/api/chronopulse', async (req, res) => {
 
     res.json({ timeline });
   } catch (err) {
-    console.error('Error generating ChronoPulse:', err);
     res.status(500).json({ error: 'Failed to generate ChronoPulse' });
   }
 });
 
-// GET Aurora: current emotional distribution
+// Aurora
 app.get('/api/aurora', async (req, res) => {
   try {
     const stories = await Story.find().lean();
@@ -274,4 +240,33 @@ app.get('/api/aurora', async (req, res) => {
       });
     });
 
-    const total =
+    const total = Object.values(emotionCounts).reduce((sum, count) => sum + count, 0);
+    const distribution = Object.entries(emotionCounts).map(([emotion, count]) => ({
+      emotion,
+      count,
+      percent: ((count / total) * 100).toFixed(1),
+    }));
+
+    res.json({ total, distribution });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate Aurora' });
+  }
+});
+
+// GET all unique pet names
+app.get('/api/pets', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const petNames = [...new Set(stories.map(s => s.petName?.trim()).filter(Boolean))];
+    res.json({ pets: petNames });
+  } catch (err) {
+    console.error('Error fetching pets:', err);
+    res.status(500).json({ error: 'Failed to fetch pets' });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
