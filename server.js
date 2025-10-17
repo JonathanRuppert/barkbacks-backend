@@ -260,16 +260,15 @@ app.get('/api/chronopulse', async (req, res) => {
   }
 });
 
-// GET all unique pet names
-app.get('/api/pets', async (req, res) => {
+// GET Aurora: current emotional distribution
+app.get('/api/aurora', async (req, res) => {
   try {
     const stories = await Story.find().lean();
-    const petNames = [...new Set(stories.map(s => s.petName?.trim()).filter(Boolean))];
-    res.json({ pets: petNames });
-  } catch (err) {
-    console.error('Error fetching pets:', err);
-    res.status(500).json({ error: 'Failed to fetch pets' });
-  }
-});
+    const emotionCounts = {};
 
-//
+    stories.forEach(s => {
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      emotions.forEach(e => {
+        const key = e.trim();
+        emotionCounts[key] = (emotionCounts[key] || 0) + 1;
+      });
