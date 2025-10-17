@@ -164,6 +164,41 @@ app.get('/api/orbittrail/:emotion', async (req, res) => {
   }
 });
 
+// GET Nova: stories with highest remix activity
+app.get('/api/nova', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const remixCounts = {};
+
+    stories.forEach(s => {
+      if (s.remixOf) {
+        const parentId = s.remixOf.toString();
+        remixCounts[parentId] = (remixCounts[parentId] || 0) + 1;
+      }
+    });
+
+    const novaStories = Object.entries(remixCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([storyId, count]) => {
+        const original = stories.find(s => s._id.toString() === storyId);
+        return {
+          remixCount: count,
+          storyId,
+          text: original?.text || '',
+          emotion: original?.emotion || '',
+          petName: original?.petName || 'Unknown',
+          creatorId: original?.creatorId || 'Unknown',
+        };
+      });
+
+    res.json({ novas: novaStories });
+  } catch (err) {
+    console.error('Error generating Nova:', err);
+    res.status(500).json({ error: 'Failed to generate Nova' });
+  }
+});
+
 // GET all unique pet names
 app.get('/api/pets', async (req, res) => {
   try {
