@@ -98,6 +98,18 @@ app.get('/api/echodepth/:creatorId', async (req, res) => {
   }
 });
 
+// GET all unique pet names
+app.get('/api/pets', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const petNames = [...new Set(stories.map(s => s.petName?.trim()).filter(Boolean))];
+    res.json({ pets: petNames });
+  } catch (err) {
+    console.error('Error fetching pets:', err);
+    res.status(500).json({ error: 'Failed to fetch pets' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
