@@ -235,7 +235,7 @@ app.get('/api/chronopulse', async (req, res) => {
     const timelineMap = new Map();
 
     stories.forEach(s => {
-      const date = new Date(s.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
+      const date = new Date(s.createdAt).toISOString().split('T')[0];
       const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
 
       if (!timelineMap.has(date)) {
@@ -272,3 +272,6 @@ app.get('/api/aurora', async (req, res) => {
         const key = e.trim();
         emotionCounts[key] = (emotionCounts[key] || 0) + 1;
       });
+    });
+
+    const total =
