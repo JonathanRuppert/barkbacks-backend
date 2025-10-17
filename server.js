@@ -9,14 +9,10 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(
-  process.env.MONGODB_URI || 'mongodb+srv://barkbacks_user:TYlerJoe_136015@cluster0.vi03iss.mongodb.net/barkbacks?retryWrites=true&w=majority&appName=Cluster0',
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-);
-
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://barkbacks_user:TYlerJoe_136015@cluster0.vi03iss.mongodb.net/barkbacks?retryWrites=true&w=majority&appName=Cluster0', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
 
