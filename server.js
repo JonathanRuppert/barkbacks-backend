@@ -135,6 +135,35 @@ app.get('/api/cascade', async (req, res) => {
   }
 });
 
+// GET OrbitTrail stories by emotion
+app.get('/api/orbittrail/:emotion', async (req, res) => {
+  try {
+    const emotion = req.params.emotion;
+    const stories = await Story.find({ emotion: { $regex: new RegExp(`^${emotion}$`, 'i') } }).lean();
+
+    const storyMap = new Map();
+    stories.forEach(s => storyMap.set(s._id.toString(), s));
+
+    const withDepth = stories.map(s => {
+      let depth = 1;
+      let current = s;
+      while (current.remixOf && storyMap.has(current.remixOf.toString())) {
+        depth++;
+        current = storyMap.get(current.remixOf.toString());
+      }
+      return {
+        ...s,
+        depth,
+      };
+    });
+
+    res.json({ emotion, stories: withDepth });
+  } catch (err) {
+    console.error('Error generating OrbitTrail:', err);
+    res.status(500).json({ error: 'Failed to generate OrbitTrail' });
+  }
+});
+
 // GET all unique pet names
 app.get('/api/pets', async (req, res) => {
   try {
