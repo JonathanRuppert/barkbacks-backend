@@ -227,6 +227,39 @@ app.get('/api/fusion', async (req, res) => {
   }
 });
 
+// GET ChronoPulse: emotional activity over time
+app.get('/api/chronopulse', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+
+    const timelineMap = new Map();
+
+    stories.forEach(s => {
+      const date = new Date(s.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+
+      if (!timelineMap.has(date)) {
+        timelineMap.set(date, {});
+      }
+
+      const emotionCounts = timelineMap.get(date);
+      emotions.forEach(e => {
+        const key = e.trim();
+        emotionCounts[key] = (emotionCounts[key] || 0) + 1;
+      });
+    });
+
+    const timeline = Array.from(timelineMap.entries())
+      .sort(([a], [b]) => new Date(a) - new Date(b))
+      .map(([date, emotionCounts]) => ({ date, emotionCounts }));
+
+    res.json({ timeline });
+  } catch (err) {
+    console.error('Error generating ChronoPulse:', err);
+    res.status(500).json({ error: 'Failed to generate ChronoPulse' });
+  }
+});
+
 // GET all unique pet names
 app.get('/api/pets', async (req, res) => {
   try {
@@ -239,7 +272,4 @@ app.get('/api/pets', async (req, res) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+//
