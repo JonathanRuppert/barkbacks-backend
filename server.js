@@ -9,7 +9,8 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URI || 'your-mongodb-connection-string', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://barkbacks_user:PASSWORD
+@cluster0.vi03iss.mongodb.net/barkbacks?retryWrites=true&w=majority&appName=Cluster0', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -266,6 +267,37 @@ app.get('/api/pets', async (req, res) => {
 });
 
 // Start server
+// ConstellationVisualizer
+app.get('/api/remix-constellation/:creatorId', async (req, res) => {
+  try {
+    const creatorId = req.params.creatorId;
+
+    // Step 1: Find all stories created by this creator
+    const originals = await Story.find({ creatorId }).lean();
+    const originalIds = originals.map(s => s._id.toString());
+
+    // Step 2: Find all remixes of those stories
+    const remixes = await Story.find({ remixOf: { $in: originalIds } }).lean();
+
+    // Step 3: Count how many times each creator remixed this creator's stories
+    const remixMap = {};
+    remixes.forEach(r => {
+      const target = r.creatorId;
+      remixMap[target] = (remixMap[target] || 0) + 1;
+    });
+
+    const connections = Object.entries(remixMap).map(([target, remixCount]) => ({
+      target,
+      remixCount
+    }));
+
+    res.json({ creatorId, connections });
+  } catch (err) {
+    console.error('Error generating remix constellation:', err);
+    res.status(500).json({ error: 'Failed to generate remix constellation' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
