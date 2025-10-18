@@ -1,20 +1,32 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const Story = require('./models/storyModel');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// Middleware
 app.use(cors());
+app.use(helmet());
 app.use(express.json());
+app.use(morgan('combined'));
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://barkbacks_user:TYlerJoe_136015@cluster0.vi03iss.mongodb.net/barkbacks?retryWrites=true&w=majority&appName=Cluster0', {
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
+
+// Health Check
+app.get('/', (req, res) => {
+  res.send('BarkBacks backend is live.');
+});
 
 // GET all stories
 app.get('/api/stories', async (req, res) => {
@@ -253,53 +265,7 @@ app.get('/api/aurora', async (req, res) => {
   }
 });
 
-// GET all unique pet names
-app.get('/api/pets', async (req, res) => {
-  try {
-    const stories = await Story.find().lean();
-    const petNames = [...new Set(stories.map(s => s.petName?.trim()).filter(Boolean))];
-    res.json({ pets: petNames });
-  } catch (err) {
-    console.error('Error fetching pets:', err);
-    res.status(500).json({ error: 'Failed to fetch pets' });
-  }
-});
-
-// Start server
-// ConstellationVisualizer
-app.get('/api/remix-constellation/:creatorId', async (req, res) => {
-  try {
-    const creatorId = req.params.creatorId;
-
-    // Step 1: Find all stories created by this creator
-    const originals = await Story.find({ creatorId }).lean();
-    const originalIds = originals.map(s => s._id.toString());
-
-    // Step 2: Find all remixes of those stories
-    const remixes = await Story.find({ remixOf: { $in: originalIds } }).lean();
-
-    // Step 3: Count how many times each creator remixed this creator's stories
-    const remixMap = {};
-    remixes.forEach(r => {
-      const target = r.creatorId;
-      if (target) {
-        remixMap[target] = (remixMap[target] || 0) + 1;
-      }
-    });
-
-    const connections = Object.entries(remixMap).map(([target, remixCount]) => ({
-      target,
-      remixCount
-    }));
-
-    res.json({ creatorId, connections });
-  } catch (err) {
-    console.error('Error generating remix constellation:', err);
-    res.status(500).json({ error: 'Failed to generate remix constellation' });
-  }
-});
-
+console.log('About to start server...');
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
