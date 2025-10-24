@@ -518,6 +518,42 @@ app.get('/api/voice-cue', async (req, res) => {
   }
 });
 
+// Creator Marketplace Scaffold
+app.get('/api/creators', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const creatorMap = {};
+
+    stories.forEach(s => {
+      const creator = s.creatorId || 'Unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      const pet = s.petName?.trim() || 'Unknown';
+
+      if (!creatorMap[creator]) {
+        creatorMap[creator] = { count: 0, emotions: {}, pets: {} };
+      }
+
+      creatorMap[creator].count += 1;
+      emotions.forEach(e => {
+        const key = e.trim();
+        creatorMap[creator].emotions[key] = (creatorMap[creator].emotions[key] || 0) + 1;
+      });
+      creatorMap[creator].pets[pet] = (creatorMap[creator].pets[pet] || 0) + 1;
+    });
+
+    const creators = Object.entries(creatorMap).map(([creatorId, data]) => ({
+      creatorId,
+      totalStories: data.count,
+      emotionSpread: data.emotions,
+      petSpread: data.pets
+    }));
+
+    res.json({ creators });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate creator marketplace scaffold' });
+  }
+});
+
 
 // 6. WebSocket broadcast helper
 
