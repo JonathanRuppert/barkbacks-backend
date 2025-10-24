@@ -442,6 +442,56 @@ app.get('/api/pet-arcs', async (req, res) => {
   }
 });
 
+// Mobile & Voice Sync
+app.get('/api/mobile-sync', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: -1 }).limit(25).lean();
+    const emotionCounts = {};
+    const petCounts = {};
+
+    stories.forEach(s => {
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      emotions.forEach(e => {
+        const key = e.trim();
+        emotionCounts[key] = (emotionCounts[key] || 0) + 1;
+      });
+
+      const pet = s.petName?.trim() || 'Unknown';
+      petCounts[pet] = (petCounts[pet] || 0) + 1;
+    });
+
+    const topEmotions = Object.entries(emotionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([emotion, count]) => ({ emotion, count }));
+
+    const topPets = Object.entries(petCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([petName, count]) => ({ petName, count }));
+
+    res.json({
+      recentStories: stories.map(s => ({
+        storyId: s._id,
+        text: s.text,
+        emotion: s.emotion,
+        petName: s.petName,
+        creatorId: s.creatorId,
+        timestamp: s.createdAt
+      })),
+      topEmotions,
+      topPets
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate mobile sync payload' });
+  }
+});
+
+// Start server
+server.listen(PORT, () => {
+  console.log(`🚀 Server + WebSocket running on port ${PORT}`);
+});
+
 
 // Start server
 const http = require('http');
