@@ -36,6 +36,15 @@ app.post('/api/stories', async (req, res) => {
     }
     const newStory = new Story({ creatorId, text, emotion, remixOf, petName });
     await newStory.save();
+
+    broadcastEmotion({
+      type: 'new_story',
+      emotion: newStory.emotion,
+      creatorId: newStory.creatorId,
+      timestamp: newStory.createdAt,
+      petName: newStory.petName || 'Unknown',
+    });
+
     res.status(200).json({ message: 'Story submitted', story: newStory });
   } catch (err) {
     res.status(500).json({ error: 'Failed to submit story' });
@@ -266,6 +275,36 @@ app.get('/api/pets', async (req, res) => {
   }
 });
 
+// Remix Constellaton
+app.get('/api/remix-constellation/:creatorId', async (req, res) => {
+  try {
+    const creatorId = req.params.creatorId;
+
+    const originals = await Story.find({ creatorId }).lean();
+    const originalIds = originals.map(s => s._id.toString());
+
+    const remixes = await Story.find({ remixOf: { $in: originalIds } }).lean();
+
+    const remixMap = {};
+    remixes.forEach(r => {
+      const target = r.creatorId;
+      if (target) {
+        remixMap[target] = (remixMap[target] || 0) + 1;
+      }
+    });
+
+    const connections = Object.entries(remixMap).map(([target, remixCount]) => ({
+      target,
+      remixCount
+    }));
+
+    res.json({ creatorId, connections });
+  } catch (err) {
+    console.error('Error generating remix constellation:', err);
+    res.status(500).json({ error: 'Failed to generate remix constellation' });
+  }
+});
+
 // Creator Pulse
 app.get('/api/creator-pulse', async (req, res) => {
   try {
@@ -297,8 +336,6 @@ app.get('/api/creator-pulse', async (req, res) => {
   }
 });
 
-
-// Start server
 // ConstellationVisualizer
 app.get('/api/remix-constellation/:creatorId', async (req, res) => {
   try {
@@ -332,7 +369,26 @@ app.get('/api/remix-constellation/:creatorId', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Start server
+const http = require('http');
+const WebSocket = require('ws');
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws) => {
+  console.log('🔌 WebSocket client connected');
 });
 
+const broadcastEmotion = (emotionPayload) => {
+  const data = JSON.stringify(emotionPayload);
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    }
+  });
+};
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server + WebSocket running on port ${PORT}`);
+});
