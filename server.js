@@ -263,6 +263,43 @@ app.get('/api/aurora', async (req, res) => {
   }
 });
 
+// Emotion Remix Tracker
+app.get('/api/emotion-remix/:emotion', async (req, res) => {
+  try {
+    const emotion = req.params.emotion.trim().toLowerCase();
+    const stories = await Story.find().lean();
+
+    const originals = stories.filter(s => {
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      return emotions.some(e => e.trim().toLowerCase() === emotion);
+    });
+
+    const originalIds = originals.map(s => s._id.toString());
+
+    const remixes = stories.filter(s => s.remixOf && originalIds.includes(s.remixOf.toString()));
+
+    const remixMap = {};
+    remixes.forEach(r => {
+      const creator = r.creatorId || 'Unknown';
+      remixMap[creator] = (remixMap[creator] || 0) + 1;
+    });
+
+    const remixStats = Object.entries(remixMap).map(([creatorId, count]) => ({
+      creatorId,
+      remixCount: count
+    }));
+
+    res.json({
+      emotion,
+      originalCount: originals.length,
+      remixCount: remixes.length,
+      remixers: remixStats
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate Emotion Remix Tracker' });
+  }
+});
+
 // GET all unique pet names
 app.get('/api/pets', async (req, res) => {
   try {
