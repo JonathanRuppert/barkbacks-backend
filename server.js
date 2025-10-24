@@ -2,7 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const http = require('http');
+const http = require('http'); & voicc
 const WebSocket = require('ws');
 const Story = require('./models/storyModel');
 
@@ -499,6 +499,25 @@ app.get('/api/mobile-sync', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate mobile sync payload' });
   }
 });
+
+// Voice-cue
+app.get('/api/voice-cue', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: -1 }).limit(10).lean();
+
+    const cues = stories.map(s => {
+      const emotion = Array.isArray(s.emotion) ? s.emotion.join(', ') : s.emotion;
+      const pet = s.petName?.trim() || 'a mystery pet';
+      const time = new Date(s.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' });
+      return `${pet} felt ${emotion} around ${time}.`;
+    });
+
+    res.json({ voiceCues: cues });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate voice cues' });
+  }
+});
+
 
 // 6. WebSocket broadcast helper
 
