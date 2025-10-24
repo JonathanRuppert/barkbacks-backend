@@ -386,6 +386,86 @@ app.get('/api/creator-pulse', async (req, res) => {
   }
 });
 
+// Creator Marketplace Scaffold
+app.get('/api/creators', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const creatorMap = {};
+
+    stories.forEach(s => {
+      const creator = s.creatorId || 'Unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      const pet = s.petName?.trim() || 'Unknown';
+
+      if (!creatorMap[creator]) {
+        creatorMap[creator] = { count: 0, emotions: {}, pets: {} };
+      }
+
+      creatorMap[creator].count += 1;
+      emotions.forEach(e => {
+        const key = e.trim();
+        creatorMap[creator].emotions[key] = (creatorMap[creator].emotions[key] || 0) + 1;
+      });
+      creatorMap[creator].pets[pet] = (creatorMap[creator].pets[pet] || 0) + 1;
+    });
+
+    const creators = Object.entries(creatorMap).map(([creatorId, data]) => ({
+      creatorId,
+      totalStories: data.count,
+      emotionSpread: data.emotions,
+      petSpread: data.pets
+    }));
+
+    res.json({ creators });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate creator marketplace scaffold' });
+  }
+});
+
+// Modules
+app.get('/api/modules', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+
+    const modules = [
+      { name: 'ChronoPulse', emotionFocus: 'temporal trends' },
+      { name: 'Aurora', emotionFocus: 'distribution overview' },
+      { name: 'Fusion', emotionFocus: 'multi-emotion stories' },
+      { name: 'Nova', emotionFocus: 'top remixed originals' },
+      { name: 'EchoDepth', emotionFocus: 'remix depth chains' },
+      { name: 'Cascade', emotionFocus: 'all remix chains' },
+      { name: 'OrbitTrail', emotionFocus: 'emotion-specific remix depth' },
+      { name: 'ConstellationVisualizer', emotionFocus: 'creator remix network' },
+      { name: 'PulseSync', emotionFocus: 'creator emotion pulse' },
+      { name: 'Remix Constellation', emotionFocus: 'creator remix spread' },
+      { name: 'Pet Arcs', emotionFocus: 'emotional arcs per pet' },
+      { name: 'Emotion Remix Tracker', emotionFocus: 'remix stats per emotion' },
+      { name: 'Mobile Sync', emotionFocus: 'lightweight mobile payload' },
+      { name: 'Voice Cue', emotionFocus: 'narration-ready summaries' }
+    ];
+
+    const usageMap = {};
+
+    stories.forEach(s => {
+      const creator = s.creatorId || 'Unknown';
+      modules.forEach(m => {
+        if (!usageMap[m.name]) usageMap[m.name] = {};
+        usageMap[m.name][creator] = (usageMap[m.name][creator] || 0) + 1;
+      });
+    });
+
+    const enrichedModules = modules.map(m => ({
+      ...m,
+      creatorUsage: usageMap[m.name]
+    }));
+
+    res.json({ modules: enrichedModules });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate module registry' });
+  }
+});
+
+
 // ConstellationVisualizer
 app.get('/api/remix-constellation/:creatorId', async (req, res) => {
   try {
@@ -517,43 +597,6 @@ app.get('/api/voice-cue', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate voice cues' });
   }
 });
-
-// Creator Marketplace Scaffold
-app.get('/api/creators', async (req, res) => {
-  try {
-    const stories = await Story.find().lean();
-    const creatorMap = {};
-
-    stories.forEach(s => {
-      const creator = s.creatorId || 'Unknown';
-      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
-      const pet = s.petName?.trim() || 'Unknown';
-
-      if (!creatorMap[creator]) {
-        creatorMap[creator] = { count: 0, emotions: {}, pets: {} };
-      }
-
-      creatorMap[creator].count += 1;
-      emotions.forEach(e => {
-        const key = e.trim();
-        creatorMap[creator].emotions[key] = (creatorMap[creator].emotions[key] || 0) + 1;
-      });
-      creatorMap[creator].pets[pet] = (creatorMap[creator].pets[pet] || 0) + 1;
-    });
-
-    const creators = Object.entries(creatorMap).map(([creatorId, data]) => ({
-      creatorId,
-      totalStories: data.count,
-      emotionSpread: data.emotions,
-      petSpread: data.pets
-    }));
-
-    res.json({ creators });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to generate creator marketplace scaffold' });
-  }
-});
-
 
 // 6. WebSocket broadcast helper
 
