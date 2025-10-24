@@ -1,21 +1,34 @@
+// 1. Requires
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const http = require('http');
+const WebSocket = require('ws');
 const Story = require('./models/storyModel');
 
+// 2. App setup
 const app = express();
 const PORT = process.env.PORT || 10000;
-
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
+// 3. WebSocket setup
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws) => {
+  console.log('🔌 WebSocket client connected');
+});
+
+// 4. MongoDB connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
+
+// 5. Routes
 
 // GET all stories
 app.get('/api/stories', async (req, res) => {
@@ -487,22 +500,7 @@ app.get('/api/mobile-sync', async (req, res) => {
   }
 });
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`🚀 Server + WebSocket running on port ${PORT}`);
-});
-
-
-// Start server
-const http = require('http');
-const WebSocket = require('ws');
-
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-wss.on('connection', (ws) => {
-  console.log('🔌 WebSocket client connected');
-});
+// 6. WebSocket broadcast helper
 
 const broadcastEmotion = (emotionPayload) => {
   const data = JSON.stringify(emotionPayload);
@@ -512,6 +510,8 @@ const broadcastEmotion = (emotionPayload) => {
     }
   });
 };
+
+// 7. Start Server
 
 server.listen(PORT, () => {
   console.log(`🚀 Server + WebSocket running on port ${PORT}`);
