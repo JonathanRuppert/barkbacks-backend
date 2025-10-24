@@ -406,6 +406,43 @@ app.get('/api/remix-constellation/:creatorId', async (req, res) => {
   }
 });
 
+// Multi-Pet Support
+app.get('/api/pet-arcs', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: 1 }).lean();
+    const petMap = {};
+
+    stories.forEach(s => {
+      const pet = s.petName?.trim() || 'Unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      if (!petMap[pet]) petMap[pet] = [];
+      petMap[pet].push({
+        storyId: s._id,
+        creatorId: s.creatorId,
+        text: s.text,
+        emotions,
+        timestamp: s.createdAt
+      });
+    });
+
+    const arcs = Object.entries(petMap).map(([petName, entries]) => ({
+      petName,
+      totalStories: entries.length,
+      emotionalArc: entries.map(e => ({
+        timestamp: e.timestamp,
+        emotions: e.emotions,
+        creatorId: e.creatorId,
+        storyId: e.storyId
+      }))
+    }));
+
+    res.json({ arcs });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate pet arcs' });
+  }
+});
+
+
 // Start server
 const http = require('http');
 const WebSocket = require('ws');
