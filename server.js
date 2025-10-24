@@ -9,9 +9,10 @@ const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://barkbacks_user:TYlerJoe_136015@cluster0.vi03iss.mongodb.net/barkbacks?retryWrites=true&w=majority&appName=Cluster0', {
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
 })
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
@@ -264,6 +265,38 @@ app.get('/api/pets', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch pets' });
   }
 });
+
+// Creator Pulse
+app.get('/api/creator-pulse', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const pulseMap = {};
+
+    stories.forEach(s => {
+      const creator = s.creatorId || 'Unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      if (!pulseMap[creator]) {
+        pulseMap[creator] = { count: 0, emotions: {} };
+      }
+      pulseMap[creator].count += 1;
+      emotions.forEach(e => {
+        const key = e.trim();
+        pulseMap[creator].emotions[key] = (pulseMap[creator].emotions[key] || 0) + 1;
+      });
+    });
+
+    const pulse = Object.entries(pulseMap).map(([creatorId, data]) => ({
+      creatorId,
+      totalStories: data.count,
+      emotionDistribution: data.emotions
+    }));
+
+    res.json({ pulse });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate Creator Pulse' });
+  }
+});
+
 
 // Start server
 // ConstellationVisualizer
