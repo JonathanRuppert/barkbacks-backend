@@ -646,6 +646,36 @@ app.get('/api/emotion-remix-tracker', async (req, res) => {
   }
 });
 
+//emotion-remix-tracker
+app.get('/api/emotion-depth-analyzer', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const depthMap = {};
+
+    stories.forEach(s => {
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      const depth = s.remixDepth || 0;
+
+      emotions.forEach(e => {
+        const key = e.trim();
+        if (!depthMap[key]) depthMap[key] = [];
+        depthMap[key].push(depth);
+      });
+    });
+
+    const depthStats = Object.entries(depthMap).map(([emotion, depths]) => {
+      const total = depths.length;
+      const avgDepth = (depths.reduce((sum, d) => sum + d, 0) / total).toFixed(2);
+      const maxDepth = Math.max(...depths);
+      return { emotion, total, avgDepth, maxDepth };
+    });
+
+    res.json({ depthStats });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to analyze emotion depth' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
