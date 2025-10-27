@@ -535,6 +535,36 @@ app.get('/api/pet-arcs', async (req, res) => {
   }
 });
 
+//Remix-attribution
+app.get('/api/remix-attribution', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const remixMap = {};
+
+    stories.forEach(s => {
+      const originalId = s.originalStoryId;
+      const remixId = s._id.toString();
+      const creator = s.creatorId || 'Unknown';
+
+      if (originalId) {
+        if (!remixMap[originalId]) remixMap[originalId] = [];
+        remixMap[originalId].push({ remixId, creator });
+      }
+    });
+
+    const attribution = Object.entries(remixMap).map(([originalId, remixes]) => ({
+      originalId,
+      remixCount: remixes.length,
+      remixedBy: remixes.map(r => r.creator)
+    }));
+
+    res.json({ attribution });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate remix attribution' });
+  }
+});
+
+
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
   try {
