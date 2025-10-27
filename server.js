@@ -617,6 +617,35 @@ app.get('/api/emotion-diversity', async (req, res) => {
   }
 });
 
+//emotion-diversity
+app.get('/api/emotion-remix-tracker', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const remixCounts = {};
+
+    stories.forEach(s => {
+      if (s.originalStoryId) {
+        const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+        emotions.forEach(e => {
+          const key = e.trim();
+          remixCounts[key] = (remixCounts[key] || 0) + 1;
+        });
+      }
+    });
+
+    const totalRemixes = Object.values(remixCounts).reduce((sum, count) => sum + count, 0);
+    const remixStats = Object.entries(remixCounts).map(([emotion, count]) => ({
+      emotion,
+      remixCount: count,
+      remixPercentage: ((count / totalRemixes) * 100).toFixed(2)
+    }));
+
+    res.json({ remixStats });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate emotion remix tracker' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
