@@ -564,6 +564,32 @@ app.get('/api/remix-attribution', async (req, res) => {
   }
 });
 
+//remix-attribution
+app.get('/api/pet-arcs', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: 1 }).lean(); // oldest to newest
+    const petMap = {};
+
+    stories.forEach(s => {
+      const pet = s.petName?.trim() || 'Unknown';
+      const emotion = Array.isArray(s.emotion) ? s.emotion.join(', ') : s.emotion;
+      const timestamp = s.createdAt;
+
+      if (!petMap[pet]) petMap[pet] = [];
+      petMap[pet].push({ emotion, timestamp });
+    });
+
+    const arcs = Object.entries(petMap).map(([petName, timeline]) => ({
+      petName,
+      emotionalTimeline: timeline
+    }));
+
+    res.json({ arcs });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate pet emotional arcs' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
