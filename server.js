@@ -590,6 +590,33 @@ app.get('/api/pet-arcs', async (req, res) => {
   }
 });
 
+//pet-arcs
+app.get('/api/emotion-diversity', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const emotionCounts = {};
+
+    stories.forEach(s => {
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      emotions.forEach(e => {
+        const key = e.trim();
+        emotionCounts[key] = (emotionCounts[key] || 0) + 1;
+      });
+    });
+
+    const total = Object.values(emotionCounts).reduce((sum, count) => sum + count, 0);
+    const diversity = Object.entries(emotionCounts).map(([emotion, count]) => ({
+      emotion,
+      count,
+      percentage: ((count / total) * 100).toFixed(2)
+    }));
+
+    res.json({ diversity });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate emotion diversity heatmap' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
