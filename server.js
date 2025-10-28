@@ -676,6 +676,23 @@ app.get('/api/emotion-depth-analyzer', async (req, res) => {
   }
 });
 
+//emotion-sync
+app.get('/api/emotion-sync', async (req, res) => {
+  try {
+    const stories = await Story.find().sort({ createdAt: -1 }).limit(50).lean();
+    const emotionStream = stories.map(s => ({
+      id: s._id,
+      petName: s.petName,
+      emotion: s.emotion,
+      timestamp: s.createdAt
+    }));
+
+    res.json({ emotionStream });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to sync emotion stream' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
