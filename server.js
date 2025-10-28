@@ -693,6 +693,35 @@ app.get('/api/emotion-sync', async (req, res) => {
   }
 });
 
+//emotion-cascade
+app.get('/api/emotion-cascade', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const cascadeMap = {};
+
+    stories.forEach(s => {
+      if (s.originalStoryId) {
+        const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+        emotions.forEach(e => {
+          const key = e.trim();
+          if (!cascadeMap[key]) cascadeMap[key] = { count: 0, chain: [] };
+          cascadeMap[key].count += 1;
+          cascadeMap[key].chain.push({
+            id: s._id,
+            depth: s.remixDepth || 0,
+            petName: s.petName,
+            timestamp: s.createdAt
+          });
+        });
+      }
+    });
+
+    res.json({ cascadeMap });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate emotion cascade' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
