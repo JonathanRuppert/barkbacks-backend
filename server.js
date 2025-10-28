@@ -722,6 +722,46 @@ app.get('/api/emotion-cascade', async (req, res) => {
   }
 });
 
+//creator-impact
+app.get('/api/creator-impact', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const impactMap = {};
+
+    stories.forEach(s => {
+      const creator = s.creatorId || 'unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      const depth = s.remixDepth || 0;
+
+      if (!impactMap[creator]) {
+        impactMap[creator] = { total: 0, emotions: {}, depthSum: 0 };
+      }
+
+      impactMap[creator].total += 1;
+      impactMap[creator].depthSum += depth;
+
+      emotions.forEach(e => {
+        const key = e.trim();
+        impactMap[creator].emotions[key] = (impactMap[creator].emotions[key] || 0) + 1;
+      });
+    });
+
+    const impactStats = Object.entries(impactMap).map(([creatorId, data]) => {
+      const avgDepth = (data.depthSum / data.total).toFixed(2);
+      return {
+        creatorId,
+        totalStories: data.total,
+        avgRemixDepth: avgDepth,
+        emotionSpread: data.emotions
+      };
+    });
+
+    res.json({ impactStats });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to calculate creator impact' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
