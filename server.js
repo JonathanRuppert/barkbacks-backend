@@ -762,6 +762,43 @@ app.get('/api/creator-impact', async (req, res) => {
   }
 });
 
+//orbit-trail
+app.get('/api/orbit-trail', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const orbitMap = {};
+
+    stories.forEach(s => {
+      const origin = s.originalStoryId || s._id.toString();
+      const depth = s.remixDepth || 0;
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+
+      if (!orbitMap[origin]) {
+        orbitMap[origin] = { total: 0, maxDepth: 0, emotions: {} };
+      }
+
+      orbitMap[origin].total += 1;
+      orbitMap[origin].maxDepth = Math.max(orbitMap[origin].maxDepth, depth);
+
+      emotions.forEach(e => {
+        const key = e.trim();
+        orbitMap[origin].emotions[key] = (orbitMap[origin].emotions[key] || 0) + 1;
+      });
+    });
+
+    const orbitStats = Object.entries(orbitMap).map(([originId, data]) => ({
+      originId,
+      totalRemixes: data.total,
+      maxDepth: data.maxDepth,
+      emotionSpread: data.emotions
+    }));
+
+    res.json({ orbitStats });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate orbit trail' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
