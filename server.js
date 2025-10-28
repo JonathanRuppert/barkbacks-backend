@@ -799,6 +799,49 @@ app.get('/api/orbit-trail', async (req, res) => {
   }
 });
 
+//emotion-summary
+app.get('/api/emotion-summary', async (req, res) => {
+  try {
+    const stories = await Story.find().lean();
+    const summaryMap = {};
+
+    stories.forEach(s => {
+      const pet = s.petName || 'unknown';
+      const emotions = Array.isArray(s.emotion) ? s.emotion : [s.emotion];
+      const depth = s.remixDepth || 0;
+      const timestamp = s.createdAt;
+
+      if (!summaryMap[pet]) {
+        summaryMap[pet] = { total: 0, emotions: {}, depthSum: 0, timestamps: [] };
+      }
+
+      summaryMap[pet].total += 1;
+      summaryMap[pet].depthSum += depth;
+      summaryMap[pet].timestamps.push(timestamp);
+
+      emotions.forEach(e => {
+        const key = e.trim();
+        summaryMap[pet].emotions[key] = (summaryMap[pet].emotions[key] || 0) + 1;
+      });
+    });
+
+    const summaries = Object.entries(summaryMap).map(([petName, data]) => {
+      const avgDepth = (data.depthSum / data.total).toFixed(2);
+      return {
+        petName,
+        totalStories: data.total,
+        avgRemixDepth: avgDepth,
+        emotionSpread: data.emotions,
+        timestamps: data.timestamps
+      };
+    });
+
+    res.json({ summaries });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate emotion summary' });
+  }
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
