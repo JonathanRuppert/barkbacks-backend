@@ -422,6 +422,37 @@ app.get('/api/creators', async (req, res) => {
   }
 });
 
+app.post('/api/lipsync-generator', async (req, res) => {
+  try {
+    const { transcript, emotion } = req.body;
+    if (!transcript || !emotion) {
+      return res.status(400).json({ error: 'Missing transcript or emotion' });
+    }
+
+    const words = transcript.trim().split(/\s+/);
+    const phonemeMap = {
+      happy: ['AH', 'EE', 'OH'],
+      sad: ['UH', 'AA', 'EH'],
+      excited: ['AY', 'OW', 'IY'],
+      calm: ['MM', 'OO', 'ER']
+    };
+
+    const basePhonemes = phonemeMap[emotion.toLowerCase()] || ['AH', 'EH', 'OH'];
+    const syncData = words.map((word, i) => ({
+      word,
+      start: i * 0.4,
+      end: i * 0.4 + 0.35,
+      phoneme: basePhonemes[i % basePhonemes.length],
+      emotionOverlay: emotion
+    }));
+
+    res.json({ syncData });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate lipsync data' });
+  }
+});
+
+
 // Modules
 app.get('/api/modules', async (req, res) => {
   try {
