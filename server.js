@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const WebSocket = require('ws');
+const AWS = require('aws-sdk');
 const Story = require('./models/storyModel');
 
 // 2. App setup
@@ -28,7 +29,69 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => console.log('MongoDB connected'))
 .catch((err) => console.error('MongoDB connection error:', err));
 
-// 5. Routes
+// 5. AWS S3 setup
+const s3 = new AWS.S3({
+  region: 'us-east-1',
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
+
+// 6. S3 Upload Helper
+const uploadPreviewToS3 = async (buffer, key) => {
+  const params = {
+    Bucket: 'barkbacks-assets',
+    Key: key,
+    Body: buffer,
+    ContentType: 'video/mp4',
+    ACL: 'public-read',
+  };
+  await s3.upload(params).promise();
+  return `https://barkbacks-assets.s3.amazonaws.com/${key}`;
+};
+
+// 7. Render Sync Route
+app.post("/api/render-sync", async (req, res) => {
+  const { syncData, style, voice } = req.body;
+
+  if (!syncData || !Array.isArray(syncData)) {
+    return res.status(400).json({ error: "Missing or invalid syncData" });
+  }
+
+  const timestamp = Date.now();
+  const key = `previews/${timestamp}-${voice}-${style}.mp4`;
+
+  console.log("🎬 Rendering request received:", { style, voice, words: syncData.length });
+
+  // Simulate rendering buffer (replace with real buffer in production)
+  const fakeBuffer = Buffer.from(`FAKE_VIDEO_CONTENT_${timestamp}`);
+
+  try {
+    const previewUrl = await uploadPreviewToS3(fakeBuffer, key);
+    res.json({
+      status: "rendered",
+      previewUrl,
+      frameCount: syncData.length,
+      mood: style,
+      voiceUsed: voice,
+    });
+  } catch (err) {
+    console.error("S3 upload failed:", err);
+    res.status(500).json({ error: "Failed to upload preview to S3" });
+  }
+});
+
+// 8. Broadcast Helper
+const broadcastEmotion = (emotionPayload) => {
+  const data = JSON.stringify(emotionPayload);
+  wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(data);
+    }
+  });
+};
+
+
+// 9. Routes
 
 // GET all stories
 app.get('/api/stories', async (req, res) => {
@@ -973,7 +1036,7 @@ const broadcastEmotion = (emotionPayload) => {
   });
 };
 
-// 7. Start Server
+// 10. Start Server
 
 server.listen(PORT, () => {
   console.log(`🚀 Server + WebSocket running on port ${PORT}`);
