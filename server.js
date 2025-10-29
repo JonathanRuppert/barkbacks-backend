@@ -1024,7 +1024,6 @@ app.get('/api/voice-cue', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate voice cues' });
   }
 });
-};
 
 // 10. Start Server
 
