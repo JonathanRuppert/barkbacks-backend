@@ -91,7 +91,6 @@ const broadcastEmotion = (emotionPayload) => {
 };
 
 
-
 // 9. Routes
 
 // GET all stories
@@ -1025,16 +1024,6 @@ app.get('/api/voice-cue', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate voice cues' });
   }
 });
-
-// 6. WebSocket broadcast helper
-
-const broadcastEmotion = (emotionPayload) => {
-  const data = JSON.stringify(emotionPayload);
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  });
 };
 
 // 10. Start Server
