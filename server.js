@@ -873,6 +873,31 @@ app.get('/api/emotion-summary', async (req, res) => {
   }
 });
 
+//render-sync
+app.post("/api/render-sync", async (req, res) => {
+  const { syncData, style, voice } = req.body;
+
+  if (!syncData || !Array.isArray(syncData)) {
+    return res.status(400).json({ error: "Missing or invalid syncData" });
+  }
+
+  // Placeholder: simulate rendering logic
+  const previewUrl = `https://barkbacks-assets.s3.amazonaws.com/previews/${Date.now()}-${voice}-${style}.mp4`;
+
+  console.log("🎬 Rendering request received:", { style, voice, words: syncData.length });
+
+  // Simulate async rendering delay
+  setTimeout(() => {
+    res.json({
+      status: "rendered",
+      previewUrl,
+      frameCount: syncData.length,
+      mood: style,
+      voiceUsed: voice,
+    });
+  }, 1000);
+});
+
 
 // Mobile & Voice Sync
 app.get('/api/mobile-sync', async (req, res) => {
