@@ -30,11 +30,15 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((err) => console.error('MongoDB connection error:', err));
 
 // 5. AWS S3 setup
-const s3 = new AWS.S3({
-  region: 'us-east-1',
+const AWS = require('aws-sdk');
+
+AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: 'us-east-1'
 });
+
+const s3 = new AWS.S3();
 
 // 6. S3 Upload Helper
 const uploadPreviewToS3 = async (buffer, key) => {
@@ -42,8 +46,7 @@ const uploadPreviewToS3 = async (buffer, key) => {
     Bucket: 'barkbacks-assets',
     Key: key,
     Body: buffer,
-    ContentType: 'video/mp4',
-    ACL: 'public-read',
+    ContentType: 'video/mp4'
   };
 
   console.log("🪵 Uploading to S3 with params:", params);
