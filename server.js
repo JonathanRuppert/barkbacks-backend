@@ -90,8 +90,7 @@ const broadcastEmotion = (emotionPayload) => {
   });
 };
 
-
-// 9. Routes
+// 9. All Routes
 
 // GET all stories
 app.get('/api/stories', async (req, res) => {
@@ -1026,7 +1025,6 @@ app.get('/api/voice-cue', async (req, res) => {
 });
 
 // 10. Start Server
-
 server.listen(PORT, () => {
   console.log(`🚀 Server + WebSocket running on port ${PORT}`);
 });
