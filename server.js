@@ -45,8 +45,16 @@ const uploadPreviewToS3 = async (buffer, key) => {
     ContentType: 'video/mp4',
     ACL: 'public-read',
   };
-  await s3.upload(params).promise();
-  return `https://barkbacks-assets.s3.amazonaws.com/${key}`;
+
+  console.log("🪵 Uploading to S3 with params:", params);
+
+  try {
+    await s3.upload(params).promise();
+    return `https://barkbacks-assets.s3.amazonaws.com/${key}`;
+  } catch (err) {
+    console.error("❌ S3 upload error:", err);
+    throw err;
+  }
 };
 
 // 7. Render Sync Route
@@ -1023,7 +1031,6 @@ app.get('/api/voice-cue', async (req, res) => {
     res.status(500).json({ error: 'Failed to generate voice cues' });
   }
 });
-
 
 // 10. Start Server
 server.listen(PORT, () => {
