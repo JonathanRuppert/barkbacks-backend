@@ -1,17 +1,38 @@
 // 1. Requires
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const WebSocket = require('ws');
 const AWS = require('aws-sdk');
+const axios = require('axios');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
 const Story = require('./models/storyModel');
+const VideoJob = require('./models/videoJobModel');
+const Daycare = require('./models/daycareModel');
+const Payment = require('./models/paymentModel');
+const { authMiddleware } = require('./middleware/authMiddleware');
+const paymentRoutes = require('./routes/paymentRoutes');
+const customerAuthRoutes = require('./routes/customerAuthRoutes');
+const daycareRoutes = require('./routes/daycareRoutes');
+const { sendVideoReadyNotification } = require('./services/emailService');
 
 // 2. App setup
 const app = express();
 const PORT = process.env.PORT || 10000;
 app.use(cors());
 app.use(express.json());
+
+// Mount payment routes
+app.use('/api/payment', paymentRoutes);
+
+// Mount customer authentication routes
+app.use('/api/customer/auth', customerAuthRoutes);
+
+// Mount daycare routes
+app.use('/api/daycare', daycareRoutes);
 
 // 3. WebSocket setup
 const server = http.createServer(app);
@@ -37,6 +58,21 @@ AWS.config.update({
 });
 
 const s3 = new AWS.S3();
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  },
+});
 
 // 6. S3 Upload Helper
 const uploadPreviewToS3 = async (buffer, key) => {
@@ -100,6 +136,417 @@ const broadcastEmotion = (emotionPayload) => {
 };
 
 // 9. All Routes
+
+// ========== AUTHENTICATION ROUTES ==========
+
+// POST /api/auth/signup - Register a new daycare
+app.post('/api/auth/signup', async (req, res) => {
+  try {
+    const { daycareName, email, password } = req.body;
+
+    if (!daycareName || !email || !password) {
+      return res.status(400).json({ error: 'daycareName, email, and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if daycare already exists
+    const existingDaycare = await Daycare.findOne({ email });
+    if (existingDaycare) {
+      return res.status(400).json({ error: 'A daycare with this email already exists' });
+    }
+
+    // Create new daycare
+    const newDaycare = new Daycare({
+      daycareName,
+      email,
+      password,
+    });
+
+    await newDaycare.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: newDaycare._id, daycareId: newDaycare.daycareId },
+      process.env.JWT_SECRET || 'barkbacks-secret-key-change-in-production',
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      message: 'Daycare registered successfully',
+      token,
+      daycare: {
+        id: newDaycare._id,
+        daycareId: newDaycare.daycareId,
+        daycareName: newDaycare.daycareName,
+        email: newDaycare.email,
+        subscription: newDaycare.subscription,
+      },
+    });
+  } catch (err) {
+    console.error('Signup error:', err);
+    res.status(500).json({ error: 'Failed to register daycare' });
+  }
+});
+
+// POST /api/auth/login - Login for existing daycare
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Find daycare by email
+    const daycare = await Daycare.findOne({ email });
+    if (!daycare) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check password
+    const isMatch = await daycare.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Check if account is active
+    if (!daycare.isActive) {
+      return res.status(403).json({ error: 'Account is inactive. Please contact support.' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: daycare._id, daycareId: daycare.daycareId },
+      process.env.JWT_SECRET || 'barkbacks-secret-key-change-in-production',
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      message: 'Login successful',
+      token,
+      daycare: {
+        id: daycare._id,
+        daycareId: daycare.daycareId,
+        daycareName: daycare.daycareName,
+        email: daycare.email,
+        subscription: daycare.subscription,
+        brandingConfig: daycare.brandingConfig,
+      },
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+// GET /api/auth/me - Get current daycare info
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    res.json({
+      daycare: {
+        id: req.daycare._id,
+        daycareId: req.daycare.daycareId,
+        daycareName: req.daycare.daycareName,
+        email: req.daycare.email,
+        subscription: req.daycare.subscription,
+        brandingConfig: req.daycare.brandingConfig,
+      },
+    });
+  } catch (err) {
+    console.error('Get me error:', err);
+    res.status(500).json({ error: 'Failed to get daycare info' });
+  }
+});
+
+// ========== VIDEO GENERATION ROUTES ==========
+
+// POST /api/videos/create - Initiate video generation
+app.post('/api/videos/create', authMiddleware, async (req, res) => {
+  try {
+    const { petName, breed, emotion, daycare_activities, number_of_dogs } = req.body;
+
+    // Validate required fields
+    if (!petName || !breed || !emotion) {
+      return res.status(400).json({ error: 'petName, breed, and emotion are required' });
+    }
+
+    // Check subscription limits
+    const daycare = await Daycare.findById(req.daycare._id);
+    if (daycare.subscription.videosUsedThisMonth >= daycare.subscription.videosPerMonth) {
+      return res.status(403).json({
+        error: 'Monthly video limit reached',
+        limit: daycare.subscription.videosPerMonth,
+        used: daycare.subscription.videosUsedThisMonth,
+      });
+    }
+
+    // Generate temporary jobId (will be replaced with VEO taskId from n8n callback)
+    const tempJobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create VideoJob in database
+    const videoJob = new VideoJob({
+      jobId: tempJobId,
+      daycareId: req.daycare.daycareId,
+      petName,
+      breed,
+      emotion,
+      daycare_activities: daycare_activities || [],
+      number_of_dogs: number_of_dogs || 1,
+      status: 'pending',
+      brandingConfig: daycare.brandingConfig,
+    });
+
+    await videoJob.save();
+
+    // Prepare payload for n8n webhook
+    const n8nPayload = {
+      jobId: tempJobId,
+      creatorId: req.daycare.daycareId,
+      pet_name: petName,
+      breed,
+      emotion,
+      daycare_activities: daycare_activities || [],
+      number_of_dogs: number_of_dogs || 1,
+      brandingConfig: daycare.brandingConfig,
+    };
+
+    // Call n8n webhook (async - don't wait for response)
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/barkbacks-customer-portal';
+
+    console.log(`🚀 Sending video job to n8n: ${tempJobId}`);
+
+    axios.post(n8nWebhookUrl, n8nPayload)
+      .then(() => {
+        console.log(`✅ n8n webhook called successfully for job: ${tempJobId}`);
+      })
+      .catch((err) => {
+        console.error(`❌ n8n webhook error for job ${tempJobId}:`, err.message);
+        // Update job status to failed
+        VideoJob.findOneAndUpdate(
+          { jobId: tempJobId },
+          { status: 'failed', errorMessage: `n8n webhook error: ${err.message}` }
+        ).catch(console.error);
+      });
+
+    // Update video count
+    daycare.subscription.videosUsedThisMonth += 1;
+    await daycare.save();
+
+    // Respond immediately
+    res.status(202).json({
+      message: 'Video generation initiated',
+      jobId: tempJobId,
+      status: 'pending',
+      estimatedTime: '2-3 minutes',
+    });
+  } catch (err) {
+    console.error('Video create error:', err);
+    res.status(500).json({ error: 'Failed to initiate video generation' });
+  }
+});
+
+// GET /api/videos/:jobId - Check video status
+app.get('/api/videos/:jobId', authMiddleware, async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const videoJob = await VideoJob.findOne({ jobId });
+
+    if (!videoJob) {
+      return res.status(404).json({ error: 'Video job not found' });
+    }
+
+    // Verify this job belongs to the requesting daycare
+    if (videoJob.daycareId !== req.daycare.daycareId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json({
+      jobId: videoJob.jobId,
+      status: videoJob.status,
+      petName: videoJob.petName,
+      breed: videoJob.breed,
+      emotion: videoJob.emotion,
+      videoUrl: videoJob.videoUrl,
+      transcript: videoJob.transcript,
+      errorMessage: videoJob.errorMessage,
+      createdAt: videoJob.createdAt,
+      updatedAt: videoJob.updatedAt,
+    });
+  } catch (err) {
+    console.error('Video status error:', err);
+    res.status(500).json({ error: 'Failed to get video status' });
+  }
+});
+
+// GET /api/videos - Get all videos for this daycare
+app.get('/api/videos', authMiddleware, async (req, res) => {
+  try {
+    const videos = await VideoJob.find({ daycareId: req.daycare.daycareId })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      videos: videos.map(v => ({
+        jobId: v.jobId,
+        status: v.status,
+        petName: v.petName,
+        breed: v.breed,
+        emotion: v.emotion,
+        videoUrl: v.videoUrl,
+        transcript: v.transcript,
+        createdAt: v.createdAt,
+      })),
+    });
+  } catch (err) {
+    console.error('Get videos error:', err);
+    res.status(500).json({ error: 'Failed to get videos' });
+  }
+});
+
+// POST /api/videos/callback - n8n callback when video is complete
+app.post('/api/videos/callback', async (req, res) => {
+  try {
+    const { jobId, veoTaskId, videoUrl, transcript, status, errorMessage } = req.body;
+
+    if (!jobId) {
+      return res.status(400).json({ error: 'jobId is required' });
+    }
+
+    // Find the video job
+    const videoJob = await VideoJob.findOne({ jobId });
+
+    if (!videoJob) {
+      console.error(`❌ VideoJob not found for jobId: ${jobId}`);
+      return res.status(404).json({ error: 'Video job not found' });
+    }
+
+    // Update job with n8n callback data
+    const updateData = {
+      status: status || 'complete',
+      videoUrl: videoUrl || '',
+      transcript: transcript || '',
+      errorMessage: errorMessage || '',
+    };
+
+    // If VEO returned a taskId, store it separately (don't replace jobId)
+    if (veoTaskId) {
+      updateData.veoTaskId = veoTaskId;
+    }
+
+    await VideoJob.findOneAndUpdate({ jobId }, updateData);
+
+    console.log(`✅ Video job updated: ${jobId} → Status: ${updateData.status}`);
+
+    // Send email notification if video is complete and created via customer portal
+    if (updateData.status === 'complete' && videoJob.createdVia === 'customer_portal' && updateData.videoUrl) {
+      // Find the payment to get customer email
+      const payment = await Payment.findOne({
+        daycareId: videoJob.daycareId,
+        videoJobIds: jobId,
+      });
+
+      if (payment && payment.customerEmail) {
+        const videoStatusUrl = `${process.env.CUSTOMER_PORTAL_URL || 'http://localhost:3001'}/video/${veoTaskId || jobId}`;
+
+        sendVideoReadyNotification({
+          to: payment.customerEmail,
+          petName: videoJob.petName,
+          videoUrl: videoStatusUrl,
+          jobId: veoTaskId || jobId,
+        }).catch(err => console.error('Email send error:', err));
+      }
+    }
+
+    // Broadcast to WebSocket clients (optional - for real-time UI updates)
+    broadcastEmotion({
+      type: 'video_complete',
+      jobId: veoTaskId || jobId,
+      status: updateData.status,
+      videoUrl: updateData.videoUrl,
+    });
+
+    res.json({ message: 'Callback received', jobId });
+  } catch (err) {
+    console.error('Callback error:', err);
+    res.status(500).json({ error: 'Failed to process callback' });
+  }
+});
+
+// POST /api/videos/save-completed - Save completed customer portal video
+app.post('/api/videos/save-completed', async (req, res) => {
+  try {
+    const {
+      veoTaskId,
+      daycareId,
+      petName,
+      breed,
+      photoUrl,
+      emotion,
+      daycare_activities,
+      number_of_dogs,
+      videoUrl,
+      transcript,
+      breedData,
+    } = req.body;
+
+    // Validate required fields
+    if (!veoTaskId || !daycareId || !petName || !videoUrl) {
+      return res.status(400).json({
+        error: 'veoTaskId, daycareId, petName, and videoUrl are required',
+      });
+    }
+
+    // Check if video already exists (prevent duplicates)
+    const existingVideo = await VideoJob.findOne({ jobId: veoTaskId });
+    if (existingVideo) {
+      console.log(`✅ Video already saved: ${veoTaskId}`);
+      return res.json({ message: 'Video already saved', jobId: veoTaskId });
+    }
+
+    // Create new VideoJob record with completed status
+    const videoJob = new VideoJob({
+      jobId: veoTaskId,
+      daycareId,
+      petName,
+      breed: breed || 'Custom Photo',
+      photoUrl: photoUrl || '',
+      emotion: emotion || 'happy',
+      daycare_activities: daycare_activities || [],
+      number_of_dogs: number_of_dogs || 1,
+      status: 'complete',
+      videoUrl,
+      transcript: transcript || '',
+      createdVia: 'customer_portal',
+      breedData: breedData || {},
+    });
+
+    await videoJob.save();
+
+    console.log(`✅ Customer portal video saved: ${veoTaskId} for daycare ${daycareId}`);
+
+    // Broadcast to WebSocket clients
+    broadcastEmotion({
+      type: 'video_complete',
+      jobId: veoTaskId,
+      status: 'complete',
+      videoUrl,
+      daycareId,
+    });
+
+    res.json({
+      message: 'Video saved successfully',
+      jobId: veoTaskId,
+    });
+  } catch (err) {
+    console.error('Save completed video error:', err);
+    res.status(500).json({ error: 'Failed to save video' });
+  }
+});
+
+// ========== STORY ROUTES (EXISTING) ==========
 
 // GET all stories
 app.get('/api/stories', async (req, res) => {
@@ -1030,6 +1477,225 @@ app.get('/api/voice-cue', async (req, res) => {
     res.json({ voiceCues: cues });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate voice cues' });
+  }
+});
+
+// ========== CUSTOMER PORTAL ROUTES (PUBLIC) ==========
+
+// GET /api/daycare/:daycareId - Get daycare info for customer portal (public)
+app.get('/api/daycare/:daycareId', async (req, res) => {
+  try {
+    const { daycareId } = req.params;
+
+    const daycare = await Daycare.findOne({ daycareId });
+
+    if (!daycare) {
+      return res.status(404).json({ error: 'Daycare not found' });
+    }
+
+    // Return only public information
+    res.json({
+      daycareId: daycare.daycareId,
+      daycareName: daycare.daycareName,
+      brandingConfig: daycare.brandingConfig,
+      isActive: daycare.isActive,
+    });
+  } catch (err) {
+    console.error('Get daycare error:', err);
+    res.status(500).json({ error: 'Failed to get daycare info' });
+  }
+});
+
+// POST /api/customer/photos/upload - Direct file upload to S3 (server-side)
+app.post('/api/customer/photos/upload', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Generate unique file key
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substr(2, 9);
+    const key = `customer-photos/${timestamp}-${randomStr}-${req.file.originalname}`;
+
+    // Upload to S3
+    const params = {
+      Bucket: 'barkbacks-assets',
+      Key: key,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    };
+
+    await s3.upload(params).promise();
+
+    const fileUrl = `https://barkbacks-assets.s3.amazonaws.com/${key}`;
+
+    console.log(`✅ Photo uploaded to S3: ${key}`);
+
+    res.json({
+      fileUrl,
+      key,
+    });
+  } catch (err) {
+    console.error('Photo upload error:', err);
+    res.status(500).json({ error: 'Failed to upload photo' });
+  }
+});
+
+// POST /api/customer/videos/create - Create video from customer portal (public)
+app.post('/api/customer/videos/create', async (req, res) => {
+  try {
+    const {
+      daycareId,
+      petName,
+      photoUrl,
+      breed,
+      emotion,
+      activities,
+    } = req.body;
+
+    // Validate required fields
+    if (!daycareId || !petName || !emotion) {
+      return res.status(400).json({
+        error: 'daycareId, petName, and emotion are required',
+      });
+    }
+
+    // Validate that either photoUrl or breed is provided
+    if (!photoUrl && !breed) {
+      return res.status(400).json({
+        error: 'Either photoUrl or breed is required',
+      });
+    }
+
+    // Find daycare
+    const daycare = await Daycare.findOne({ daycareId });
+
+    if (!daycare) {
+      return res.status(404).json({ error: 'Daycare not found' });
+    }
+
+    // Check if daycare is active
+    if (!daycare.isActive) {
+      return res.status(403).json({ error: 'This daycare is not currently active' });
+    }
+
+    // Check for available payment credits (FIFO - oldest first)
+    const availablePayment = await Payment.findOne({
+      daycareId,
+      status: 'completed',
+      $expr: { $gt: ['$videosRemaining', '$videosUsed'] }
+    }).sort({ paidAt: 1 });
+
+    if (!availablePayment) {
+      return res.status(402).json({
+        error: 'No video credits available',
+        message: 'Please purchase a video package to continue',
+        requiresPayment: true,
+      });
+    }
+
+    // Generate temporary jobId
+    const tempJobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create VideoJob in database
+    const videoJob = new VideoJob({
+      jobId: tempJobId,
+      daycareId: daycare.daycareId,
+      petName,
+      breed: breed || 'Custom Photo',
+      photoUrl: photoUrl || '',
+      emotion,
+      daycare_activities: activities || [],
+      number_of_dogs: 1,
+      status: 'pending',
+      brandingConfig: daycare.brandingConfig,
+      createdVia: 'customer_portal', // Mark as customer-created
+    });
+
+    await videoJob.save();
+
+    // Prepare payload for n8n webhook
+    const n8nPayload = {
+      jobId: tempJobId,
+      creatorId: daycare.daycareId,
+      pet_name: petName,
+      breed: breed || 'Custom Photo',
+      photo_url: photoUrl || '',
+      emotion,
+      daycare_activities: activities || [],
+      number_of_dogs: 1,
+      brandingConfig: daycare.brandingConfig,
+    };
+
+    // Call n8n webhook (async - don't wait for response)
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/barkbacks-customer-portal';
+
+    console.log(`🚀 [CUSTOMER] Sending video job to n8n: ${tempJobId}`);
+    console.log(`📷 [CUSTOMER] photo_url in payload: "${n8nPayload.photo_url}"`);
+    console.log(`🐕 [CUSTOMER] breed in payload: "${n8nPayload.breed}"`);
+
+    axios.post(n8nWebhookUrl, n8nPayload)
+      .then(() => {
+        console.log(`✅ [CUSTOMER] n8n webhook called successfully for job: ${tempJobId}`);
+      })
+      .catch((err) => {
+        console.error(`❌ [CUSTOMER] n8n webhook error for job ${tempJobId}:`, err.message);
+        VideoJob.findOneAndUpdate(
+          { jobId: tempJobId },
+          { status: 'failed', errorMessage: `n8n webhook error: ${err.message}` }
+        ).catch(console.error);
+      });
+
+    // Deduct a credit from the oldest payment (FIFO)
+    availablePayment.videosUsed += 1;
+    availablePayment.videoJobIds.push(tempJobId);
+    await availablePayment.save();
+
+    const creditsRemaining = availablePayment.videosRemaining - availablePayment.videosUsed;
+    console.log(`💳 Credit used for ${daycareId}. Payment: ${availablePayment._id}, Credits remaining: ${creditsRemaining}`);
+
+    // Respond immediately
+    res.status(202).json({
+      message: 'Video generation initiated',
+      jobId: tempJobId,
+      status: 'pending',
+      estimatedTime: '2-3 minutes',
+      creditsRemaining,
+      paymentId: availablePayment._id,
+    });
+  } catch (err) {
+    console.error('[CUSTOMER] Video create error:', err);
+    res.status(500).json({ error: 'Failed to initiate video generation' });
+  }
+});
+
+// GET /api/customer/videos/:jobId - Check video status (public)
+app.get('/api/customer/videos/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const videoJob = await VideoJob.findOne({ jobId });
+
+    if (!videoJob) {
+      return res.status(404).json({ error: 'Video job not found' });
+    }
+
+    res.json({
+      jobId: videoJob.jobId,
+      status: videoJob.status,
+      petName: videoJob.petName,
+      breed: videoJob.breed,
+      emotion: videoJob.emotion,
+      videoUrl: videoJob.videoUrl,
+      transcript: videoJob.transcript,
+      errorMessage: videoJob.errorMessage,
+      createdAt: videoJob.createdAt,
+      updatedAt: videoJob.updatedAt,
+    });
+  } catch (err) {
+    console.error('[CUSTOMER] Video status error:', err);
+    res.status(500).json({ error: 'Failed to get video status' });
   }
 });
 
