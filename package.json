@@ -4,9 +4,13 @@
   "description": "Backend server for BarkBacks — emotionally immersive pet storytelling platform",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "web:start": "vite --host 0.0.0.0",
+    "web:build": "vite build",
+    "web:preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.6.0",
     "bcrypt": "^5.1.1",
@@ -19,7 +23,11 @@
     "mongoose": "^8.20.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.14.2",
     "stripe": "^19.3.1",
+    "vite": "^8.0.10",
     "ws": "^8.18.3"
   },
   "engines": {

@@ -1,0 +1,116 @@
+.hero-section,
+.split-hero {
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  display: grid;
+  gap: 48px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  padding: 92px 7vw;
+}
+
+.hero-copy h1,
+.split-hero h1 {
+  font-size: clamp(2.4rem, 7vw, 5.8rem);
+  line-height: 0.96;
+  margin: 0 0 24px;
+}
+
+.hero-copy p,
+.hero-copy {
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.button,
+.primary-button,
+.secondary-button {
+  align-items: center;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 22px;
+  text-decoration: none;
+}
+
+.button.primary,
+.primary-button {
+  background: linear-gradient(135deg, #ff7a59, #ff477e);
+  color: #fff;
+}
+
+.button.secondary,
+.secondary-button {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  outline: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+.primary-button.light {
+  background: #fff;
+  color: #4d3c87;
+}
+
+.feature-grid {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 74px 7vw;
+}
+
+.feature-grid article,
+.feature-card {
+  background: #fff;
+  border: 1px solid #e6e9f4;
+  border-radius: 24px;
+  box-shadow: 0 20px 50px rgba(20, 30, 60, 0.08);
+  padding: 28px;
+}
+
+.video-placeholder {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  display: flex;
+  font-size: 3rem;
+  font-weight: 900;
+  height: 220px;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.cta-band {
+  background: #172033;
+  color: #fff;
+  padding: 74px 7vw;
+  text-align: center;
+}
+
+@media (max-width: 800px) {
+  .hero-section,
+  .split-hero,
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+}
