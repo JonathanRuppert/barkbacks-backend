@@ -1,2 +1,4 @@
 .env
 openAI-apikey.txt
+node_modules/
+dist/

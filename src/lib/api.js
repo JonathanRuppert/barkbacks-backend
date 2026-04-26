@@ -28,6 +28,21 @@ export async function apiRequest(path, options = {}) {
   return data;
 }
 
+export const apiFetch = apiRequest;
+export const request = apiRequest;
+
+export function apiGet(path, options = {}) {
+  return apiRequest(path, { ...options, method: 'GET' });
+}
+
+export function formatCurrency(value = 0) {
+  const amount = Number(value) > 999 ? Number(value) / 100 : Number(value);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(Number.isFinite(amount) ? amount : 0);
+}
+
 export async function uploadFile(path, formData) {
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
